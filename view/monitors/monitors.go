@@ -44,7 +44,7 @@ func NewMonitorsView() *MonitorsView {
 	mv.box.SetMarginTop(24)
 	mv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("Monitors")
+	header := gtk4.LabelNew("xrandr Monitors")
 	header.AddCSSClass("header-label")
 	headerWidget := header.Widget
 	mv.box.Append(&headerWidget)

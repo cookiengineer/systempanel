@@ -41,7 +41,7 @@ func NewVolumeView() *VolumeView {
 	vv.box.SetMarginTop(24)
 	vv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("Audio Devices")
+	header := gtk4.LabelNew("pulseaudio Devices")
 	header.AddCSSClass("header-label")
 	headerWidget := header.Widget
 	vv.box.Append(&headerWidget)

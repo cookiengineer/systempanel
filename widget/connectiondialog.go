@@ -96,7 +96,7 @@ func (d *ConnectionDialog) initConnection() {
 func (d *ConnectionDialog) build() {
 	d.win = gtk4.WindowNew()
 	d.win.SetTitle("Connection Settings - " + d.ssid)
-	d.win.SetDefaultSize(550, 480)
+	d.win.SetDefaultSize(800, 600)
 	d.win.SetModal(true)
 	d.win.SetTransientFor(d.parentWin)
 
@@ -337,7 +337,7 @@ func (d *ConnectionDialog) addField(box *gtk4.Box, labelText string, entryPtr **
 	row.SetMarginBottom(4)
 
 	lbl := gtk4.LabelNew(labelText)
-	lbl.SetSizeRequest(130, -1)
+	lbl.SetSizeRequest(200, -1)
 	lbl.SetHAlign(gtk4.AlignEnd)
 	lbl.SetMarginEnd(4)
 	lw := lbl.Widget
@@ -359,7 +359,7 @@ func (d *ConnectionDialog) addComboRow(box *gtk4.Box, labelText string, combo *g
 	row.SetMarginBottom(4)
 
 	lbl := gtk4.LabelNew(labelText)
-	lbl.SetSizeRequest(130, -1)
+	lbl.SetSizeRequest(200, -1)
 	lbl.SetHAlign(gtk4.AlignEnd)
 	lbl.SetMarginEnd(4)
 	lw := lbl.Widget
@@ -379,7 +379,7 @@ func (d *ConnectionDialog) addSpinRow(box *gtk4.Box, labelText string, spin *gtk
 	row.SetMarginBottom(4)
 
 	lbl := gtk4.LabelNew(labelText)
-	lbl.SetSizeRequest(130, -1)
+	lbl.SetSizeRequest(200, -1)
 	lbl.SetHAlign(gtk4.AlignEnd)
 	lbl.SetMarginEnd(4)
 	lw := lbl.Widget

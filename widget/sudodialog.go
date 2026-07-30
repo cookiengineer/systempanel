@@ -51,10 +51,14 @@ func (sd *SudoDialog) build() {
 	vbox.SetMarginBottom(24)
 
 	headerBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 12)
+
+	iconWrapper := gtk4.BoxNew(gtk4.OrientationHorizontal, 0)
+	iconWrapper.SetSizeRequest(90, -1)
+	iconWrapper.SetHAlign(gtk4.AlignEnd)
 	icon := gtk4.ImageNewFromIconName("dialog-password-symbolic")
 	icon.SetPixelSize(48)
-	iconWidget := icon.Widget
-	headerBox.Append(&iconWidget)
+	iconWrapper.Append(&icon.Widget)
+	headerBox.Append(&iconWrapper.Widget)
 
 	msgBox := gtk4.BoxNew(gtk4.OrientationVertical, 4)
 	title := gtk4.LabelNew("Authentication Required")
@@ -99,13 +103,16 @@ func (sd *SudoDialog) build() {
 	vbox.Append(&elWidget)
 
 	btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
-	btnBox.SetHAlign(gtk4.AlignEnd)
 	btnBox.SetMarginTop(8)
 
 	cancelBtn := gtk4.ButtonNewWithLabel("Cancel")
 	cancelBtn.OnClicked(func() { sd.cancel() })
 	cbWidget := cancelBtn.Widget
 	btnBox.Append(&cbWidget)
+
+	spacer := gtk4.LabelNew("")
+	spacer.SetHExpand(true)
+	btnBox.Append(&spacer.Widget)
 
 	okBtn := gtk4.ButtonNewWithLabel("Authenticate")
 	okBtn.AddCSSClass("suggested-action")

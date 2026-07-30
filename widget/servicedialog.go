@@ -63,7 +63,7 @@ func (sd *ServiceDialog) loadTargets() {
 func (sd *ServiceDialog) build() {
 	sd.win = gtk4.WindowNew()
 	sd.win.SetTitle("Service Settings - " + sd.unitName)
-	sd.win.SetDefaultSize(650, 520)
+	sd.win.SetDefaultSize(800, 600)
 	sd.win.SetModal(true)
 	sd.win.SetTransientFor(sd.parentWin)
 
@@ -252,7 +252,7 @@ func (sd *ServiceDialog) createEntryRow(section, key, value string) *gtk4.Box {
 	row.SetMarginBottom(2)
 
 	lbl := gtk4.LabelNew(key)
-	lbl.SetSizeRequest(220, -1)
+	lbl.SetSizeRequest(200, -1)
 	lbl.SetHAlign(gtk4.AlignStart)
 	lbl.SetMarginEnd(8)
 	lbl.SetTooltip(key)
@@ -274,7 +274,7 @@ func (sd *ServiceDialog) createComboRow(section, key, value string) *gtk4.Box {
 	row.SetMarginBottom(2)
 
 	lbl := gtk4.LabelNew(key)
-	lbl.SetSizeRequest(220, -1)
+	lbl.SetSizeRequest(200, -1)
 	lbl.SetHAlign(gtk4.AlignStart)
 	lbl.SetMarginEnd(8)
 	lbl.SetTooltip(key)
@@ -315,7 +315,7 @@ func (sd *ServiceDialog) createCheckRow(section, key, value string) *gtk4.Box {
 	row.SetMarginBottom(2)
 
 	lbl := gtk4.LabelNew(key)
-	lbl.SetSizeRequest(220, -1)
+	lbl.SetSizeRequest(200, -1)
 	lbl.SetHAlign(gtk4.AlignStart)
 	lbl.SetMarginEnd(8)
 	lbl.SetTooltip(key)
@@ -336,7 +336,7 @@ func (sd *ServiceDialog) createCapSetRow(section, key, value string) *gtk4.Box {
 	row.SetMarginBottom(4)
 
 	lbl := gtk4.LabelNew(key)
-	lbl.SetSizeRequest(220, -1)
+	lbl.SetSizeRequest(200, -1)
 	lbl.SetHAlign(gtk4.AlignStart)
 	lbl.SetMarginEnd(8)
 	lbl.SetVAlign(gtk4.AlignStart)

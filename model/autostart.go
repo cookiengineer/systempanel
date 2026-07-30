@@ -9,11 +9,12 @@ import (
 )
 
 type AutostartEntry struct {
-	Path   string
-	Name   string
-	Exec   string
-	Icon   string
-	Hidden bool
+	Path    string
+	Name    string
+	Comment string
+	Exec    string
+	Icon    string
+	Hidden  bool
 }
 
 type AutostartModel struct {
@@ -24,80 +25,33 @@ func (m *AutostartModel) Refresh(ctx context.Context) error { return nil }
 func (m *AutostartModel) Observe(fn Observer) func()        { return func() {} }
 
 func (m *AutostartModel) ListEntries() ([]AutostartEntry, error) {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".config", "autostart")
+	os.MkdirAll(dir, 0755)
+
+	files, err := filepath.Glob(filepath.Join(dir, "*.desktop"))
+	if err != nil {
+		return nil, err
+	}
 	var entries []AutostartEntry
-	for _, dir := range autostartDirs() {
-		files, err := filepath.Glob(filepath.Join(dir, "*.desktop"))
+	for _, f := range files {
+		entry, err := desktop.Parse(f)
 		if err != nil {
 			continue
 		}
-		for _, file := range files {
-			entry, err := desktop.Parse(file)
-			if err != nil {
-				continue
-			}
-			if entry.NoDisplay {
-				continue
-			}
-			entries = append(entries, AutostartEntry{
-				Path:   file,
-				Name:   entry.Name,
-				Exec:   entry.Exec,
-				Icon:   entry.Icon,
-				Hidden: entry.Hidden,
-			})
+		name := entry.Get("Name")
+		if name == "" {
+			name = filepath.Base(f)
+			name = name[:len(name)-len(".desktop")]
 		}
+		entries = append(entries, AutostartEntry{
+			Path:    f,
+			Name:    name,
+			Comment: entry.Get("Comment"),
+			Exec:    entry.Get("Exec"),
+			Icon:    entry.Get("Icon"),
+			Hidden:  entry.Get("Hidden") == "true",
+		})
 	}
 	return entries, nil
-}
-
-func (m *AutostartModel) Enable(path string) error {
-	entry, err := desktop.Parse(path)
-	if err != nil {
-		return err
-	}
-	entry.Hidden = false
-	return writeDesktopFile(path, entry)
-}
-
-func (m *AutostartModel) Disable(path string) error {
-	entry, err := desktop.Parse(path)
-	if err != nil {
-		return err
-	}
-	entry.Hidden = true
-	return writeDesktopFile(path, entry)
-}
-
-func writeDesktopFile(path string, entry *desktop.DesktopEntry) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	content := string(data)
-	if entry.Hidden {
-		content = setDesktopKey(content, "Hidden", "true")
-	} else {
-		content = setDesktopKey(content, "Hidden", "false")
-	}
-	return os.WriteFile(path, []byte(content), 0644)
-}
-
-func setDesktopKey(content, key, value string) string {
-	return content
-}
-
-func autostartDirs() []string {
-	var dirs []string
-	configDir := os.Getenv("XDG_CONFIG_HOME")
-	if configDir == "" {
-		home, err := os.UserHomeDir()
-		if err == nil {
-			configDir = filepath.Join(home, ".config")
-		}
-	}
-	if configDir != "" {
-		dirs = append(dirs, filepath.Join(configDir, "autostart"))
-	}
-	dirs = append(dirs, "/etc/xdg/autostart")
-	return dirs
 }
