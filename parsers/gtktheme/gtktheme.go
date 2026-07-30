@@ -8,8 +8,9 @@ import (
 )
 
 type Settings struct {
-	ThemeName string
-	Path      string
+	ThemeName     string
+	IconThemeName string
+	Path          string
 }
 
 func Load(path string) (*Settings, error) {
@@ -38,6 +39,9 @@ func Load(path string) (*Settings, error) {
 		if key == "gtk-theme-name" {
 			s.ThemeName = value
 		}
+		if key == "gtk-icon-theme-name" {
+			s.IconThemeName = value
+		}
 	}
 	return s, scanner.Err()
 }
@@ -52,6 +56,21 @@ func Save(path, themeName string) error {
 		content = "[Settings]\ngtk-theme-name=" + themeName + "\n"
 	} else {
 		content = setKey(string(data), "gtk-theme-name", themeName)
+	}
+
+	return os.WriteFile(path, []byte(content), 0644)
+}
+
+func SaveIcon(path, iconThemeName string) error {
+	dir := filepath.Dir(path)
+	os.MkdirAll(dir, 0755)
+
+	var content string
+	data, err := os.ReadFile(path)
+	if err != nil {
+		content = "[Settings]\ngtk-icon-theme-name=" + iconThemeName + "\n"
+	} else {
+		content = setKey(string(data), "gtk-icon-theme-name", iconThemeName)
 	}
 
 	return os.WriteFile(path, []byte(content), 0644)

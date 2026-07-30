@@ -201,6 +201,11 @@ void gtk4SetThemeName(const char *name) {
 	g_object_set(settings, "gtk-theme-name", name, NULL);
 }
 
+void gtk4SetIconThemeName(const char *name) {
+	GtkSettings *settings = gtk_settings_get_default();
+	g_object_set(settings, "gtk-icon-theme-name", name, NULL);
+}
+
 void *gtk4ComboBoxTextNew(void) { return gtk_combo_box_text_new(); }
 void *gtk4ComboBoxTextNewWithEntry(void) { return gtk_combo_box_text_new_with_entry(); }
 void gtk4ComboBoxTextAppend(void *cb, const char *id, const char *text) { gtk_combo_box_text_append((GtkComboBoxText*)cb, id, text); }

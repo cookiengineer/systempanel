@@ -78,6 +78,24 @@ func HasSystemd() bool {
 	return err == nil
 }
 
+// HasIcons checks for installable icon themes in the system directory.
+func HasIcons() bool {
+	entries, err := os.ReadDir("/usr/share/icons")
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		path := filepath.Join("/usr/share/icons", e.Name())
+		if info, err := os.Stat(filepath.Join(path, "index.theme")); err == nil && !info.IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
 // HasThemes checks for installable GTK themes in the system directory.
 func HasThemes() bool {
 	entries, err := os.ReadDir("/usr/share/themes")

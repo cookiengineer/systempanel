@@ -111,6 +111,7 @@ extern void gtk4WidgetSetName(void *w, const char *n);
 extern void gtk4WidgetSetTooltip(void *w, const char *t);
 extern void gtk4SetDarkTheme(int dark);
 extern void gtk4SetThemeName(const char *name);
+extern void gtk4SetIconThemeName(const char *name);
 
 extern void *gtk4ComboBoxTextNew(void);
 extern void *gtk4ComboBoxTextNewWithEntry(void);
@@ -480,4 +481,10 @@ func SetThemeName(name string) {
 	cn := C.CString(name)
 	defer C.free(unsafe.Pointer(cn))
 	C.gtk4SetThemeName(cn)
+}
+
+func SetIconThemeName(name string) {
+	cn := C.CString(name)
+	defer C.free(unsafe.Pointer(cn))
+	C.gtk4SetIconThemeName(cn)
 }

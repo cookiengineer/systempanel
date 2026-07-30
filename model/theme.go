@@ -70,14 +70,20 @@ func (m *ThemeModel) CurrentTheme() string {
 }
 
 func (m *ThemeModel) ApplyTheme(name string) error {
-	configDir := filepath.Join(xdgConfigHome(), "gtk-4.0")
-	path := filepath.Join(configDir, "settings.ini")
+	path := ConfigPath()
+	iconName := currentIconName()
 	if err := gtktheme.Save(path, name); err != nil {
 		return err
+	}
+	if iconName != "" {
+		gtktheme.SaveIcon(path, iconName)
 	}
 
 	go func() {
 		exec.Command("gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", name).Run()
+		if iconName != "" {
+			exec.Command("gsettings", "set", "org.gnome.desktop.interface", "icon-theme", iconName).Run()
+		}
 	}()
 
 	gtk4.IdleAdd(func() {
@@ -119,4 +125,20 @@ func ConfigDir() string {
 
 func ConfigPath() string {
 	return filepath.Join(ConfigDir(), "settings.ini")
+}
+
+func currentIconName() string {
+	settings, err := gtktheme.Load(ConfigPath())
+	if err != nil || settings.IconThemeName == "" {
+		return ""
+	}
+	return settings.IconThemeName
+}
+
+func currentThemeName() string {
+	settings, err := gtktheme.Load(ConfigPath())
+	if err != nil || settings.ThemeName == "" {
+		return ""
+	}
+	return settings.ThemeName
 }

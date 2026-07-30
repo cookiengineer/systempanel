@@ -21,6 +21,7 @@ import (
 	"github.com/cookiengineer/systempanel/view/journal"
 	"github.com/cookiengineer/systempanel/view/lan"
 	"github.com/cookiengineer/systempanel/view/themes"
+	"github.com/cookiengineer/systempanel/view/icons"
 )
 
 func init() {
@@ -39,6 +40,7 @@ func registerViews() {
 		journal.Descriptor,
 		battery.Descriptor,
 		themes.Descriptor,
+		icons.Descriptor,
 		settings.Descriptor,
 	}
 }
