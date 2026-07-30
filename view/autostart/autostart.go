@@ -43,7 +43,7 @@ func NewAutostartView() *AutostartView {
 	av.box.SetMarginTop(24)
 	av.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("xdg Autostart Applications")
+	header := gtk4.LabelNew("Autostart Applications")
 	header.AddCSSClass("header-label")
 	av.box.Append(&header.Widget)
 

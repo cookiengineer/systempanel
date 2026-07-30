@@ -78,6 +78,27 @@ func HasSystemd() bool {
 	return err == nil
 }
 
+// HasThemes checks for installable GTK themes in the system directory.
+func HasThemes() bool {
+	entries, err := os.ReadDir("/usr/share/themes")
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		path := filepath.Join("/usr/share/themes", e.Name())
+		if _, err := os.Stat(filepath.Join(path, "gtk-4.0", "gtk.css")); err == nil {
+			return true
+		}
+		if _, err := os.Stat(filepath.Join(path, "gtk-3.0", "gtk.css")); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
 // HasPulseAudio checks if the PulseAudio server is reachable via pactl.
 func HasPulseAudio() bool {
 	cmd := exec.Command("pactl", "info")

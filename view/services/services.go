@@ -46,9 +46,15 @@ func NewServicesView() *ServicesView {
 	sv.box.SetMarginTop(24)
 	sv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("systemd Services")
+	header := gtk4.LabelNew("Services")
 	header.AddCSSClass("header-label")
 	sv.box.Append(&header.Widget)
+
+	desc := gtk4.LabelNew("View and manage systemd service units and their status.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	dv := desc.Widget
+	sv.box.Append(&dv)
 
 	sv.listBox = gtk4.ListBoxNew()
 	sv.listBox.SetSelectionMode(gtk4.SelectionSingle)

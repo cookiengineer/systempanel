@@ -36,9 +36,15 @@ func NewBatteryView() *BatteryView {
 	bv.box.SetMarginTop(24)
 	bv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("upower Batteries")
+	header := gtk4.LabelNew("Batteries")
 	header.AddCSSClass("header-label")
 	bv.box.Append(&header.Widget)
+
+	desc := gtk4.LabelNew("Monitor battery charge level, health, and estimated runtime.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	dv := desc.Widget
+	bv.box.Append(&dv)
 
 	bv.listBox = gtk4.ListBoxNew()
 	bv.listBox.SetSelectionMode(gtk4.SelectionNone)

@@ -191,6 +191,16 @@ void gtk4WidgetAddCssClass(void *w, const char *c) { gtk_widget_add_css_class((G
 void gtk4WidgetSetName(void *w, const char *n) { gtk_widget_set_name((GtkWidget*)w, n); }
 void gtk4WidgetSetTooltip(void *w, const char *t) { gtk_widget_set_tooltip_text((GtkWidget*)w, t); }
 
+void gtk4SetDarkTheme(int dark) {
+	GtkSettings *settings = gtk_settings_get_default();
+	g_object_set(settings, "gtk-application-prefer-dark-theme", dark ? TRUE : FALSE, NULL);
+}
+
+void gtk4SetThemeName(const char *name) {
+	GtkSettings *settings = gtk_settings_get_default();
+	g_object_set(settings, "gtk-theme-name", name, NULL);
+}
+
 void *gtk4ComboBoxTextNew(void) { return gtk_combo_box_text_new(); }
 void *gtk4ComboBoxTextNewWithEntry(void) { return gtk_combo_box_text_new_with_entry(); }
 void gtk4ComboBoxTextAppend(void *cb, const char *id, const char *text) { gtk_combo_box_text_append((GtkComboBoxText*)cb, id, text); }

@@ -52,6 +52,17 @@ func NewSettingsView() *SettingsView {
 		sv.box.Append(&row.Widget)
 	}
 
+	sep := gtk4.LabelNew("")
+	sep.SetMarginTop(8)
+	sv.box.Append(&sep.Widget)
+
+	themeHeader := gtk4.LabelNew("Appearance")
+	themeHeader.AddCSSClass("header-label")
+	sv.box.Append(&themeHeader.Widget)
+
+	darkRow := sv.createToggleRow("dark-mode", "Dark Mode", false)
+	sv.box.Append(&darkRow.Widget)
+
 	aboutBox := sv.buildAboutSection()
 	sv.box.Append(&aboutBox.Widget)
 
@@ -76,6 +87,10 @@ func (sv *SettingsView) createToggleRow(name, title string, active bool) *gtk4.B
 	sw.SetActive(active)
 	sv.toggles[name] = sw
 	sw.OnActivate(func() {
+		if name == "dark-mode" {
+			gtk4.SetDarkTheme(sw.GetActive())
+			return
+		}
 		sv.settings.SetVisible(name, sw.GetActive())
 		if sv.onVisibility != nil {
 			sv.onVisibility()

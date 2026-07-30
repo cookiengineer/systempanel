@@ -48,10 +48,16 @@ func NewLANView() *LANView {
 	lv.box.SetMarginTop(24)
 	lv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("Ethernet Connections")
+	header := gtk4.LabelNew("LAN Connections")
 	header.AddCSSClass("header-label")
 	headerWidget := header.Widget
 	lv.box.Append(&headerWidget)
+
+	desc := gtk4.LabelNew("Manage wired Ethernet connections and network profiles.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	dv := desc.Widget
+	lv.box.Append(&dv)
 
 	lv.list = gtk4.ListBoxNew()
 	lv.list.SetSelectionMode(gtk4.SelectionSingle)

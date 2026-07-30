@@ -41,10 +41,16 @@ func NewVolumeView() *VolumeView {
 	vv.box.SetMarginTop(24)
 	vv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("pulseaudio Devices")
+	header := gtk4.LabelNew("Volume")
 	header.AddCSSClass("header-label")
 	headerWidget := header.Widget
 	vv.box.Append(&headerWidget)
+
+	desc := gtk4.LabelNew("Control input and output audio devices and volume levels.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	dv := desc.Widget
+	vv.box.Append(&dv)
 
 	vv.listBox = gtk4.ListBoxNew()
 	vv.listBox.SetSelectionMode(gtk4.SelectionNone)

@@ -59,6 +59,12 @@ func NewBluetoothView() *BluetoothView {
 	headerWidget := header.Widget
 	bv.box.Append(&headerWidget)
 
+	desc := gtk4.LabelNew("Discover and manage Bluetooth devices nearby.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	dv := desc.Widget
+	bv.box.Append(&dv)
+
 	bv.listBox = gtk4.ListBoxNew()
 	bv.listBox.SetSelectionMode(gtk4.SelectionSingle)
 	bv.listBox.OnRowActivated(bv.onRowSelected)

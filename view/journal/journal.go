@@ -35,9 +35,15 @@ func NewJournalView() *JournalView {
 	jv.box.SetMarginTop(24)
 	jv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("systemd Journal")
+	header := gtk4.LabelNew("Journal")
 	header.AddCSSClass("header-label")
 	jv.box.Append(&header.Widget)
+
+	desc := gtk4.LabelNew("Browse recent system log entries from journald.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	dv := desc.Widget
+	jv.box.Append(&dv)
 
 	jv.listBox = gtk4.ListBoxNew()
 	jv.listBox.SetSelectionMode(gtk4.SelectionNone)

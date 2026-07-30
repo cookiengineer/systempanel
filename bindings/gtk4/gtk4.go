@@ -109,6 +109,8 @@ extern void gtk4WidgetSetMarginBottom(void *w, int m);
 extern void gtk4WidgetAddCssClass(void *w, const char *c);
 extern void gtk4WidgetSetName(void *w, const char *n);
 extern void gtk4WidgetSetTooltip(void *w, const char *t);
+extern void gtk4SetDarkTheme(int dark);
+extern void gtk4SetThemeName(const char *name);
 
 extern void *gtk4ComboBoxTextNew(void);
 extern void *gtk4ComboBoxTextNewWithEntry(void);
@@ -138,11 +140,27 @@ extern void gtk4StackSwitcherSetStack(void *sw, void *stack);
 import "C"
 
 import (
+	"os/exec"
 	"runtime/cgo"
+	"strings"
 	"unsafe"
 )
 
-func init() { C.gtk4Init() }
+func init() {
+	C.gtk4Init()
+	applySystemTheme()
+}
+
+func applySystemTheme() {
+	out, err := exec.Command("gsettings", "get", "org.gnome.desktop.interface", "color-scheme").Output()
+	if err != nil {
+		return
+	}
+	scheme := strings.TrimSpace(string(out))
+	if scheme == "'prefer-dark'" {
+		C.gtk4SetDarkTheme(1)
+	}
+}
 
 const (
 	sigVoid = iota
@@ -448,4 +466,18 @@ func (sw *StackSwitcher) SetStack(s *Stack) { C.gtk4StackSwitcherSetStack(sw.ptr
 func IdleAdd(fn func()) {
 	h := cgo.NewHandle(fn)
 	C.gtk4IdleAdd(C.uintptr_t(uintptr(h)))
+}
+
+func SetDarkTheme(dark bool) {
+	if dark {
+		C.gtk4SetDarkTheme(1)
+	} else {
+		C.gtk4SetDarkTheme(0)
+	}
+}
+
+func SetThemeName(name string) {
+	cn := C.CString(name)
+	defer C.free(unsafe.Pointer(cn))
+	C.gtk4SetThemeName(cn)
 }

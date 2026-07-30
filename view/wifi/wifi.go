@@ -54,10 +54,16 @@ func NewWiFiView() *WiFiView {
 	wv.box.SetMarginTop(24)
 	wv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("Wi-Fi Networks")
+	header := gtk4.LabelNew("Wi-Fi Connections")
 	header.AddCSSClass("header-label")
 	headerWidget := header.Widget
 	wv.box.Append(&headerWidget)
+
+	desc := gtk4.LabelNew("Scan and connect to available wireless networks.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	dv := desc.Widget
+	wv.box.Append(&dv)
 
 	wv.listBox = gtk4.ListBoxNew()
 	wv.listBox.SetSelectionMode(gtk4.SelectionSingle)

@@ -44,10 +44,16 @@ func NewMonitorsView() *MonitorsView {
 	mv.box.SetMarginTop(24)
 	mv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("xrandr Monitors")
+	header := gtk4.LabelNew("Monitors")
 	header.AddCSSClass("header-label")
 	headerWidget := header.Widget
 	mv.box.Append(&headerWidget)
+
+	desc := gtk4.LabelNew("Configure resolution and arrangement of connected displays.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	dv := desc.Widget
+	mv.box.Append(&dv)
 
 	mv.listBox = gtk4.ListBoxNew()
 	mv.listBox.SetSelectionMode(gtk4.SelectionNone)
