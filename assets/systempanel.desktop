@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SystemPanel
+Comment=Adaptive GTK4 system control panel
+StartupNotify=true
+Exec=systempanel
+Icon=settings
+Categories=System;Settings;
+Keywords=control;panel;settings;system;
