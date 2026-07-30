@@ -107,6 +107,7 @@ func RunAll() DetectionResult {
 			"brightnessctl":   HasProgram("brightnessctl"),
 			"powerprofilesctl": HasProgram("powerprofilesctl"),
 			"gammastep":       HasProgram("gammastep"),
+			"xrandr":          HasProgram("xrandr"),
 		},
 		Hardware: map[string]bool{
 			"wifi":      HasWiFiHardware(),

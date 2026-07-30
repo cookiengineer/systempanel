@@ -28,6 +28,7 @@ type WiFiView struct {
 	model       *model.WiFiModel
 	listBox     *gtk4.ListBox
 	connectBtn  *gtk4.Button
+	spinner     *gtk4.Spinner
 	networks    []networkListItem
 	rowPtrToIdx map[unsafe.Pointer]int
 	sectionRows []*gtk4.ListBoxRow
@@ -80,6 +81,10 @@ func NewWiFiView() *WiFiView {
 	rbw := refreshBtn.Widget
 	btnBox.Append(&rbw)
 
+	wv.spinner = gtk4.SpinnerNew()
+	spinnerWidget := wv.spinner.Widget
+	btnBox.Append(&spinnerWidget)
+
 	spacer := gtk4.LabelNew("")
 	spacer.SetHExpand(true)
 	spWidget := spacer.Widget
@@ -105,32 +110,44 @@ func (wv *WiFiView) refresh() {
 	wv.selectedSSID = ""
 	wv.selectedCfg = false
 
-	networks, _ := wv.model.Scan()
-	profiles, _ := wv.model.ConfiguredSSIDs()
+	wv.connectBtn.SetSensitive(false)
 
+	gtk4.IdleAdd(func() { wv.spinner.Start() })
+
+	go func() {
+		networks, _ := wv.model.Scan()
+		profiles, _ := wv.model.ConfiguredSSIDs()
+
+		var items []networkListItem
+		for _, n := range networks {
+			_, configured := profiles[n.SSID]
+			items = append(items, networkListItem{network: n, configured: configured})
+		}
+		sort.Slice(items, func(i, j int) bool {
+			if items[i].configured != items[j].configured {
+				return items[i].configured
+			}
+			return strings.ToLower(items[i].network.SSID) < strings.ToLower(items[j].network.SSID)
+		})
+
+		gtk4.IdleAdd(func() {
+			wv.spinner.Stop()
+			wv.populateList(items)
+		})
+	}()
+}
+
+func (wv *WiFiView) populateList(items []networkListItem) {
 	for _, item := range wv.networks {
 		wv.listBox.Remove(item.row)
 	}
 	for _, row := range wv.sectionRows {
 		wv.listBox.Remove(row)
 	}
-	wv.networks = wv.networks[:0]
+	wv.networks = items
 	wv.sectionRows = wv.sectionRows[:0]
 	wv.rowPtrToIdx = make(map[unsafe.Pointer]int)
 
-	for _, n := range networks {
-		_, configured := profiles[n.SSID]
-		wv.networks = append(wv.networks, networkListItem{network: n, configured: configured})
-	}
-
-	sort.Slice(wv.networks, func(i, j int) bool {
-		if wv.networks[i].configured != wv.networks[j].configured {
-			return wv.networks[i].configured
-		}
-		return strings.ToLower(wv.networks[i].network.SSID) < strings.ToLower(wv.networks[j].network.SSID)
-	})
-
-	insertedSep := false
 	hasConfigured := false
 	for _, item := range wv.networks {
 		if item.configured {
@@ -139,21 +156,25 @@ func (wv *WiFiView) refresh() {
 		}
 	}
 	if hasConfigured {
-		headerRow := wv.createSectionLabel("─ Saved Networks ─")
-		wv.listBox.Append(headerRow)
-		wv.sectionRows = append(wv.sectionRows, headerRow)
+		hdr := wv.createSectionLabel("─ Saved Networks ─")
+		wv.listBox.Append(hdr)
+		wv.sectionRows = append(wv.sectionRows, hdr)
 	}
+
+	idx := 0
+	insertedSep := false
 	for i := range wv.networks {
 		if !wv.networks[i].configured && !insertedSep {
-			sepRow := wv.createSectionLabel("─ Available Networks ─")
-			wv.listBox.Append(sepRow)
-			wv.sectionRows = append(wv.sectionRows, sepRow)
+			sep := wv.createSectionLabel("─ Available Networks ─")
+			wv.listBox.Append(sep)
+			wv.sectionRows = append(wv.sectionRows, sep)
 			insertedSep = true
 		}
 		row := wv.createNetworkRow(&wv.networks[i])
 		wv.listBox.Append(row)
 		wv.networks[i].row = row
-		wv.rowPtrToIdx[row.Widget.Ptr()] = i
+		wv.rowPtrToIdx[row.Widget.Ptr()] = idx
+		idx++
 	}
 
 	wv.connectBtn.SetSensitive(false)

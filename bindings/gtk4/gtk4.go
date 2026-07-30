@@ -129,6 +129,7 @@ extern double gtk4SpinButtonGetValue(void *sb);
 
 extern void gtk4WindowSetModal(void *win, int modal);
 extern void gtk4WindowSetTransientFor(void *win, void *parent);
+extern unsigned int gtk4IdleAdd(uintptr_t data);
 
 extern void *gtk4StackSwitcherNew(void);
 extern void gtk4StackSwitcherSetStack(void *sw, void *stack);
@@ -181,6 +182,11 @@ func goBridgeBool(data C.uintptr_t) C.int {
 //export goBridgeDouble
 func goBridgeDouble(data C.uintptr_t, val C.double) {
 	cgo.Handle(uintptr(data)).Value().(func(float64))(float64(val))
+}
+
+//export goBridgeIdle
+func goBridgeIdle(data C.uintptr_t) {
+	cgo.Handle(uintptr(data)).Value().(func())()
 }
 
 type Widget struct{ ptr unsafe.Pointer }
@@ -435,3 +441,8 @@ func (s *SpinButton) GetValue() float64 { return float64(C.gtk4SpinButtonGetValu
 type StackSwitcher struct{ Widget }
 func StackSwitcherNew() *StackSwitcher { return &StackSwitcher{Widget{ptr: C.gtk4StackSwitcherNew()}} }
 func (sw *StackSwitcher) SetStack(s *Stack) { C.gtk4StackSwitcherSetStack(sw.ptr, s.ptr) }
+
+func IdleAdd(fn func()) {
+	h := cgo.NewHandle(fn)
+	C.gtk4IdleAdd(C.uintptr_t(uintptr(h)))
+}

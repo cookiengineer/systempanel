@@ -14,93 +14,184 @@ var Descriptor = view.ViewDescriptor{
 	DetectFn: func() bool {
 		return detect.HasProgram("pactl") && detect.HasPulseAudio()
 	},
-	Factory:  func() view.View { return NewVolumeView() },
+	Factory: func() view.View { return NewVolumeView() },
+}
+
+type volumeDeviceItem struct {
+	device model.VolumeDevice
+	muteBtn *gtk4.Button
+	scale   *gtk4.Scale
 }
 
 type VolumeView struct {
 	box     *gtk4.Box
 	model   *model.VolumeModel
-	sliders map[string]*gtk4.Scale
-	mutes   map[string]*gtk4.Button
+	listBox *gtk4.ListBox
+	items   []volumeDeviceItem
+	rows    []*gtk4.ListBoxRow
 }
 
 func NewVolumeView() *VolumeView {
 	vv := &VolumeView{
-		box:     gtk4.BoxNew(gtk4.OrientationVertical, 12),
-		model:   model.NewVolumeModel(),
-		sliders: make(map[string]*gtk4.Scale),
-		mutes:   make(map[string]*gtk4.Button),
+		box:   gtk4.BoxNew(gtk4.OrientationVertical, 12),
+		model: model.NewVolumeModel(),
 	}
 	vv.box.SetMarginStart(24)
 	vv.box.SetMarginEnd(24)
 	vv.box.SetMarginTop(24)
 	vv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("Audio Output")
+	header := gtk4.LabelNew("Audio Devices")
 	header.AddCSSClass("header-label")
 	headerWidget := header.Widget
 	vv.box.Append(&headerWidget)
 
-	vv.buildDevices()
+	vv.listBox = gtk4.ListBoxNew()
+	vv.listBox.SetSelectionMode(gtk4.SelectionNone)
+
+	scrollW := gtk4.ScrolledWindowNew()
+	scrollW.SetPolicy(gtk4.PolicyNever, gtk4.PolicyAutomatic)
+	scrollW.SetHExpand(true)
+	scrollW.SetVExpand(true)
+
+	scrollWidget := scrollW.Widget
+	listWidget := vv.listBox.Widget
+	scrollW.SetChild(&listWidget)
+	vv.box.Append(&scrollWidget)
+
+	btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	btnBox.SetMarginTop(4)
 
 	refreshBtn := gtk4.ButtonNewWithLabel("Refresh")
-	refreshBtn.OnClicked(func() {
-		vv.refresh()
-	})
-	refreshWidget := refreshBtn.Widget
-	vv.box.Append(&refreshWidget)
+	refreshBtn.OnClicked(func() { vv.refresh() })
+	rbw := refreshBtn.Widget
+	btnBox.Append(&rbw)
+
+	btnBoxWidget := btnBox.Widget
+	vv.box.Append(&btnBoxWidget)
+
+	vv.refresh()
 
 	return vv
 }
 
-func (vv *VolumeView) buildDevices() {
-	sinks, _ := vv.model.ListSinks()
+func (vv *VolumeView) refresh() {
+	for _, r := range vv.rows {
+		vv.listBox.Remove(r)
+	}
+	vv.rows = vv.rows[:0]
+	vv.items = vv.items[:0]
 
-	if len(sinks) == 0 {
-		label := gtk4.LabelNew("No audio devices found")
-		label.SetSensitive(false)
-		labelWidget := label.Widget
-		vv.box.Append(&labelWidget)
-		return
+	sinks, _ := vv.model.ListSinks()
+	sources, _ := vv.model.ListSources()
+
+	if len(sources) > 0 {
+		hdr := vv.createSectionLabel("─ Input Devices ─")
+		vv.listBox.Append(hdr)
+		vv.rows = append(vv.rows, hdr)
+		for _, s := range sources {
+			row := vv.createDeviceRow(s)
+			vv.listBox.Append(row)
+			vv.rows = append(vv.rows, row)
+		}
 	}
 
-	for _, sink := range sinks {
-		row := gtk4.BoxNew(gtk4.OrientationHorizontal, 12)
-		row.AddCSSClass("device-row")
+	if len(sinks) > 0 {
+		hdr := vv.createSectionLabel("─ Output Devices ─")
+		vv.listBox.Append(hdr)
+		vv.rows = append(vv.rows, hdr)
+		for _, s := range sinks {
+			row := vv.createDeviceRow(s)
+			vv.listBox.Append(row)
+			vv.rows = append(vv.rows, row)
+		}
+	}
 
-		muteBtn := gtk4.ButtonNew()
-		muteBtn.SetIconName("audio-volume-muted-symbolic")
-		muteBtn.OnClicked(func() {
-			vv.model.ToggleMuteSink(sink.Name)
-		})
-		mbWidget := muteBtn.Widget
-		row.Append(&mbWidget)
-
-		nameLabel := gtk4.LabelNew(sink.Description)
-		nameLabel.SetHExpand(true)
-		nameLabel.SetHAlign(gtk4.AlignStart)
-		nlWidget := nameLabel.Widget
-		row.Append(&nlWidget)
-
-		scale := gtk4.ScaleNew(gtk4.OrientationHorizontal)
-		scale.SetValue(float64(sink.Volume))
-		scale.SetRange(0, 100)
-		scale.SetSizeRequest(150, -1)
-		scale.OnValueChanged(func(val float64) {
-			vv.model.SetSinkVolume(sink.Name, int(val))
-		})
-		vv.sliders[sink.Name] = scale
-		scaleWidget := scale.Widget
-		row.Append(&scaleWidget)
-
-		rowWidget := row.Widget
-		vv.box.Append(&rowWidget)
+	if len(sinks) == 0 && len(sources) == 0 {
+		label := gtk4.LabelNew("No audio devices found")
+		label.SetSensitive(false)
+		label.SetHAlign(gtk4.AlignCenter)
+		lw := label.Widget
+		row := gtk4.ListBoxRowNew()
+		row.SetChild(&lw)
+		vv.listBox.Append(row)
 	}
 }
 
-func (vv *VolumeView) refresh() {
-	for _, s := range vv.sliders {
-		s.SetValue(50)
+func (vv *VolumeView) createSectionLabel(text string) *gtk4.ListBoxRow {
+	row := gtk4.ListBoxRowNew()
+	row.SetSensitive(false)
+	label := gtk4.LabelNew(text)
+	label.SetHAlign(gtk4.AlignCenter)
+	label.SetMarginTop(8)
+	label.SetMarginBottom(4)
+	label.SetSensitive(false)
+	lw := label.Widget
+	row.SetChild(&lw)
+	return row
+}
+
+func (vv *VolumeView) createDeviceRow(dev model.VolumeDevice) *gtk4.ListBoxRow {
+	row := gtk4.ListBoxRowNew()
+	row.AddCSSClass("device-row")
+
+	hbox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+
+	muteBtn := gtk4.ButtonNew()
+	vv.updateMuteIcon(muteBtn, dev)
+
+	name := dev.Name
+	isInput := dev.IsInput
+	item := volumeDeviceItem{device: dev, muteBtn: muteBtn}
+	vv.items = append(vv.items, item)
+
+	muteBtn.OnClicked(func() {
+		item.device.Mute = !item.device.Mute
+		if isInput {
+			vv.model.ToggleMuteSource(name)
+		} else {
+			vv.model.ToggleMuteSink(name)
+		}
+		vv.updateMuteIcon(muteBtn, item.device)
+	})
+	mbWidget := muteBtn.Widget
+	hbox.Append(&mbWidget)
+
+	nameLabel := gtk4.LabelNew(dev.Description)
+	nameLabel.SetHExpand(true)
+	nameLabel.SetHAlign(gtk4.AlignStart)
+	nlWidget := nameLabel.Widget
+	hbox.Append(&nlWidget)
+
+	scale := gtk4.ScaleNewWithRange(gtk4.OrientationHorizontal, 0, 100, 1)
+	scale.SetValue(float64(dev.Volume))
+	scale.SetSizeRequest(180, -1)
+	initialized := false
+	scale.OnValueChanged(func(val float64) {
+		if !initialized {
+			initialized = true
+			return
+		}
+		if isInput {
+			return
+		}
+		vv.model.SetSinkVolume(name, int(val))
+	})
+	item.scale = scale
+	sw := scale.Widget
+	hbox.Append(&sw)
+
+	hboxWidget := hbox.Widget
+	row.SetChild(&hboxWidget)
+
+	return row
+}
+
+func (vv *VolumeView) updateMuteIcon(btn *gtk4.Button, dev model.VolumeDevice) {
+	if dev.Mute {
+		btn.SetIconName("audio-volume-muted-symbolic")
+	} else {
+		btn.SetIconName("audio-volume-high-symbolic")
 	}
 }
 
@@ -108,6 +199,6 @@ func (vv *VolumeView) Widget() *gtk4.Widget { return &vv.box.Widget }
 func (vv *VolumeView) Name() string          { return "volume" }
 func (vv *VolumeView) Title() string         { return "Volume" }
 func (vv *VolumeView) IconName() string      { return "audio-volume-high-symbolic" }
-func (vv *VolumeView) OnShow()               {}
+func (vv *VolumeView) OnShow()               { vv.refresh() }
 func (vv *VolumeView) OnHide()               {}
 func (vv *VolumeView) Destroy()              {}

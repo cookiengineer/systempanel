@@ -16,10 +16,10 @@ import (
 	"github.com/cookiengineer/systempanel/view/wifi"
 	"github.com/cookiengineer/systempanel/view/bluetooth"
 	"github.com/cookiengineer/systempanel/view/battery"
-	"github.com/cookiengineer/systempanel/view/display"
+	"github.com/cookiengineer/systempanel/view/monitors"
 	"github.com/cookiengineer/systempanel/view/services"
-	"github.com/cookiengineer/systempanel/view/journal"
 	"github.com/cookiengineer/systempanel/view/autostart"
+	"github.com/cookiengineer/systempanel/view/journal"
 	"github.com/cookiengineer/systempanel/view/lan"
 )
 
@@ -29,16 +29,16 @@ func init() {
 
 func registerViews() {
 	view.Registry = []view.ViewDescriptor{
-		power.Descriptor,
-		volume.Descriptor,
+		lan.Descriptor,
 		wifi.Descriptor,
 		bluetooth.Descriptor,
-		battery.Descriptor,
-		display.Descriptor,
+		volume.Descriptor,
+		monitors.Descriptor,
 		services.Descriptor,
-		journal.Descriptor,
 		autostart.Descriptor,
-		lan.Descriptor,
+		journal.Descriptor,
+		battery.Descriptor,
+		power.Descriptor,
 		settings.Descriptor,
 	}
 }

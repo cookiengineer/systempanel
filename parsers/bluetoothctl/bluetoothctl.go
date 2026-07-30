@@ -176,15 +176,17 @@ func ParseShow(output string) *Controller {
 
 func parseInt(s string) int {
 	var n int
-	for _, c := range s {
-		if c == '-' {
+	neg := false
+	for i, c := range s {
+		if c == '-' && i < len(s)-1 && s[i+1] >= '0' && s[i+1] <= '9' {
+			neg = true
 			continue
 		}
 		if c >= '0' && c <= '9' {
 			n = n*10 + int(c-'0')
 		}
 	}
-	if strings.HasPrefix(s, "-") {
+	if neg {
 		n = -n
 	}
 	return n

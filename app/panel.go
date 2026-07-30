@@ -8,6 +8,7 @@ import (
 	"github.com/cookiengineer/systempanel/config"
 	"github.com/cookiengineer/systempanel/detect"
 	"github.com/cookiengineer/systempanel/view"
+	"github.com/cookiengineer/systempanel/widget"
 )
 
 type SystemPanel struct {
@@ -104,6 +105,12 @@ func (p *SystemPanel) Build() {
 	})
 
 	p.win.Present()
+
+	widget.PromptForSudo(p.win, "SystemPanel needs administrative privileges to manage network connections and system services.", func(password string) {
+		if password != "" {
+			log.Println("Sudo session cached for privileged operations")
+		}
+	})
 }
 
 func (p *SystemPanel) buildSidebar() {

@@ -1,7 +1,6 @@
 package widget
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -528,18 +527,15 @@ func (d *ConnectionDialog) onSave() {
 	}
 	path := filepath.Join(profileDir, filename)
 
-	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, []byte(content), 0600); err != nil {
-		fmt.Println("write tmp error:", err)
-		return
-	}
-
-	if err := exec.Command("pkexec", "mv", tmpPath, path).Run(); err != nil {
-		sd := NewSudoDialog(d.parentWin)
-		sd.RunCommand("mv", tmpPath, path)
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		tmpPath := filepath.Join("/tmp", filename+".tmp")
+		os.WriteFile(tmpPath, []byte(content), 0600)
+		if err := RunSudoCommand("cp", tmpPath, path); err != nil {
+			sd := NewSudoDialog(d.parentWin)
+			sd.RunCommand("cp", tmpPath, path)
+		}
 		os.Remove(tmpPath)
 	}
-
 	exec.Command("nmcli", "connection", "reload").Run()
 	d.win.Close()
 }

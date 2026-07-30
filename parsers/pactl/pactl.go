@@ -89,7 +89,15 @@ type SinkInput struct {
 
 // ParseSinks parses the output of "pactl list sinks".
 func ParseSinks(output string) []Sink {
-	var sinks []Sink
+	return parseDevices(output, "Sink")
+}
+
+func ParseSources(output string) []Sink {
+	return parseDevices(output, "Source")
+}
+
+func parseDevices(output, prefix string) []Sink {
+	var devices []Sink
 	var current *Sink
 	currentSection := ""
 
@@ -101,12 +109,12 @@ func ParseSinks(output string) []Sink {
 			continue
 		}
 
-		if strings.HasPrefix(trimmed, "Sink #") {
+		if strings.HasPrefix(trimmed, prefix+" #") {
 			if current != nil {
-				sinks = append(sinks, *current)
+				devices = append(devices, *current)
 			}
 			current = &Sink{Properties: make(map[string]string), Ports: make([]Port, 0)}
-			currentSection = "sink"
+			currentSection = prefix
 			continue
 		}
 		if current == nil {
@@ -130,9 +138,9 @@ func ParseSinks(output string) []Sink {
 		}
 	}
 	if current != nil {
-		sinks = append(sinks, *current)
+		devices = append(devices, *current)
 	}
-	return sinks
+	return devices
 }
 
 func parseSection(line string, sink *Sink) string {

@@ -214,6 +214,17 @@ double gtk4SpinButtonGetValue(void *sb) { return gtk_spin_button_get_value((GtkS
 void gtk4WindowSetModal(void *win, int modal) { gtk_window_set_modal((GtkWindow*)win, modal); }
 void gtk4WindowSetTransientFor(void *win, void *parent) { gtk_window_set_transient_for((GtkWindow*)win, (GtkWindow*)parent); }
 
+extern void goBridgeIdle(uintptr_t data);
+
+static int _bridge_idle(gpointer data) {
+	goBridgeIdle((uintptr_t)data);
+	return 0;
+}
+
+unsigned int gtk4IdleAdd(uintptr_t data) {
+	return g_idle_add(_bridge_idle, (gpointer)(uintptr_t)data);
+}
+
 void *gtk4StackSwitcherNew(void) { return gtk_stack_switcher_new(); }
 void gtk4StackSwitcherSetStack(void *sw, void *stack) { gtk_stack_switcher_set_stack((GtkStackSwitcher*)sw, (GtkStack*)stack); }
 void *gtk4WindowGetTransientFor(void *win) { return gtk_window_get_transient_for((GtkWindow*)win); }
