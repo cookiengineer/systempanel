@@ -50,6 +50,7 @@ extern void gtk4ImageSetPixelSize(void *img, int size);
 extern void *gtk4StackNew(void);
 extern void *gtk4StackAddTitled(void *s, void *child, const char *name, const char *title);
 extern void gtk4StackSetVisibleChildName(void *s, const char *name);
+extern void gtk4StackRemove(void *s, void *child);
 extern const char *gtk4StackGetVisibleChildName(void *s);
 extern void *gtk4StackGetChildByName(void *s, const char *name);
 extern void gtk4StackSetTransitionType(void *s, int t);
@@ -321,6 +322,7 @@ func (s *Stack) GetChildByName(name string) *Widget {
 }
 func (s *Stack) SetTransitionType(t StackTransitionType) { C.gtk4StackSetTransitionType(s.ptr, C.int(t)) }
 func (s *Stack) SetTransitionDuration(d uint) { C.gtk4StackSetTransitionDuration(s.ptr, C.uint(d)) }
+func (s *Stack) Remove(child *Widget) { C.gtk4StackRemove(s.ptr, child.ptr) }
 func (s *Stack) SetVHomogeneous(v bool) { C.gtk4StackSetVHomogeneous(s.ptr, cbool(v)) }
 func (s *Stack) SetHHomogeneous(v bool) {}
 func (s *Stack) GetPage(child *Widget) *StackPage {

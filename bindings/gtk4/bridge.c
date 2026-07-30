@@ -104,6 +104,7 @@ void *gtk4StackAddTitled(void *s, void *child, const char *name, const char *tit
 	return gtk_stack_add_titled((GtkStack*)s, (GtkWidget*)child, name, title);
 }
 void gtk4StackSetVisibleChildName(void *s, const char *name) { gtk_stack_set_visible_child_name((GtkStack*)s, name); }
+void gtk4StackRemove(void *s, void *child) { gtk_stack_remove((GtkStack*)s, (GtkWidget*)child); }
 const char *gtk4StackGetVisibleChildName(void *s) { return gtk_stack_get_visible_child_name((GtkStack*)s); }
 void *gtk4StackGetChildByName(void *s, const char *name) { return gtk_stack_get_child_by_name((GtkStack*)s, name); }
 void gtk4StackSetTransitionType(void *s, int t) { gtk_stack_set_transition_type((GtkStack*)s, t); }

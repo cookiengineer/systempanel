@@ -1,10 +1,13 @@
 package services
 
 import (
+	"unsafe"
+
 	"github.com/cookiengineer/systempanel/bindings/gtk4"
 	"github.com/cookiengineer/systempanel/detect"
 	"github.com/cookiengineer/systempanel/model"
 	"github.com/cookiengineer/systempanel/view"
+	"github.com/cookiengineer/systempanel/widget"
 )
 
 var Descriptor = view.ViewDescriptor{
@@ -17,152 +20,157 @@ var Descriptor = view.ViewDescriptor{
 	Factory: func() view.View { return NewServicesView() },
 }
 
-type ServicesView struct {
-	box     *gtk4.Box
-	model   *model.ServicesModel
-	listBox *gtk4.ListBox
-	units   []unitItem
-	filter  string
+type serviceItem struct {
+	service model.ServiceUnit
+	row     *gtk4.ListBoxRow
 }
 
-type unitItem struct {
-	unit model.SystemdUnit
-	row  *gtk4.ListBoxRow
+type ServicesView struct {
+	box         *gtk4.Box
+	model       *model.ServicesModel
+	listBox     *gtk4.ListBox
+	rowPtrToIdx map[unsafe.Pointer]int
+	items       []serviceItem
+	rows        []*gtk4.ListBoxRow
+	parentWin   *gtk4.Window
 }
 
 func NewServicesView() *ServicesView {
 	sv := &ServicesView{
-		box:   gtk4.BoxNew(gtk4.OrientationVertical, 12),
-		model: &model.ServicesModel{},
+		box:         gtk4.BoxNew(gtk4.OrientationVertical, 12),
+		model:       &model.ServicesModel{},
+		rowPtrToIdx: make(map[unsafe.Pointer]int),
 	}
 	sv.box.SetMarginStart(24)
 	sv.box.SetMarginEnd(24)
 	sv.box.SetMarginTop(24)
 	sv.box.SetMarginBottom(24)
 
-	header := gtk4.LabelNew("Systemd Services")
+	header := gtk4.LabelNew("systemd Services")
 	header.AddCSSClass("header-label")
-	headerWidget := header.Widget
-	sv.box.Append(&headerWidget)
-
-	filterBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
-	filterBox.SetMarginBottom(8)
-
-	filterLabel := gtk4.LabelNew("Filter:")
-	flWidget := filterLabel.Widget
-	filterBox.Append(&flWidget)
-
-	filterEntry := gtk4.EntryNew()
-	filterEntry.SetPlaceholder("Search units...")
-	filterEntry.OnChanged(func() {
-		sv.filter = filterEntry.GetText()
-		sv.refreshList()
-	})
-	filterEntry.SetHExpand(true)
-	feWidget := filterEntry.Widget
-	filterBox.Append(&feWidget)
-
-	filterBoxWidget := filterBox.Widget
-	sv.box.Append(&filterBoxWidget)
+	sv.box.Append(&header.Widget)
 
 	sv.listBox = gtk4.ListBoxNew()
 	sv.listBox.SetSelectionMode(gtk4.SelectionSingle)
-	sv.listBox.OnRowActivated(func(row *gtk4.ListBoxRow) {
-		for _, item := range sv.units {
-			if item.row == row {
-				if item.unit.ActiveState == "active" {
-					sv.model.Stop(item.unit.Name)
-				} else {
-					sv.model.Start(item.unit.Name)
-				}
-				return
-			}
-		}
-	})
+	sv.listBox.OnRowActivated(sv.onRowSelected)
 
 	scrollW := gtk4.ScrolledWindowNew()
 	scrollW.SetPolicy(gtk4.PolicyNever, gtk4.PolicyAutomatic)
 	scrollW.SetHExpand(true)
 	scrollW.SetVExpand(true)
+	scrollW.SetChild(&sv.listBox.Widget)
+	sv.box.Append(&scrollW.Widget)
 
-	scrollWidget := scrollW.Widget
-	listWidget := sv.listBox.Widget
-	scrollW.SetChild(&listWidget)
-	sv.box.Append(&scrollWidget)
+	btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	btnBox.SetMarginTop(4)
 
 	refreshBtn := gtk4.ButtonNewWithLabel("Refresh")
 	refreshBtn.OnClicked(func() { sv.refresh() })
-	refreshWidget := refreshBtn.Widget
-	sv.box.Append(&refreshWidget)
+	btnBox.Append(&refreshBtn.Widget)
+
+	spacer := gtk4.LabelNew("")
+	spacer.SetHExpand(true)
+	btnBox.Append(&spacer.Widget)
+
+	btnBoxWidget := btnBox.Widget
+	sv.box.Append(&btnBoxWidget)
 
 	sv.refresh()
 
 	return sv
 }
 
+func (sv *ServicesView) SetParentWindow(parent *gtk4.Window) { sv.parentWin = parent }
+
 func (sv *ServicesView) refresh() {
-	units, _ := sv.model.ListUnits()
-	sv.units = sv.units[:0]
-	for _, u := range units {
-		sv.units = append(sv.units, unitItem{unit: u})
+	for _, r := range sv.rows {
+		sv.listBox.Remove(r)
 	}
-	sv.refreshList()
+	sv.rows = sv.rows[:0]
+	sv.items = sv.items[:0]
+	sv.rowPtrToIdx = make(map[unsafe.Pointer]int)
+
+	go func() {
+		userUnits, _ := sv.model.ListUnits(true)
+		systemUnits, _ := sv.model.ListUnits(false)
+
+		gtk4.IdleAdd(func() {
+			hasUser := false
+			for _, u := range userUnits {
+				if u.ActiveState != "inactive" || u.LoadState != "not-found" {
+					hasUser = true
+					break
+				}
+			}
+			if hasUser {
+				hdr := sv.createSectionLabel("─ User Services ─")
+				sv.listBox.Append(hdr)
+				sv.rows = append(sv.rows, hdr)
+				for i := range userUnits {
+					row := sv.createServiceRow(&userUnits[i])
+					sv.listBox.Append(row)
+					sv.rows = append(sv.rows, row)
+					sv.items = append(sv.items, serviceItem{service: userUnits[i], row: row})
+					sv.rowPtrToIdx[row.Widget.Ptr()] = len(sv.items) - 1
+				}
+			}
+
+			hdr := sv.createSectionLabel("─ System Services ─")
+			sv.listBox.Append(hdr)
+			sv.rows = append(sv.rows, hdr)
+			for i := range systemUnits {
+				row := sv.createServiceRow(&systemUnits[i])
+				sv.listBox.Append(row)
+				sv.rows = append(sv.rows, row)
+				sv.items = append(sv.items, serviceItem{service: systemUnits[i], row: row})
+				sv.rowPtrToIdx[row.Widget.Ptr()] = len(sv.items) - 1
+			}
+		})
+	}()
 }
 
-func (sv *ServicesView) refreshList() {
-	for _, item := range sv.units {
-		if item.row != nil {
-			sv.listBox.Remove(item.row)
-		}
-	}
-
-	for i := range sv.units {
-		u := sv.units[i].unit
-		if sv.filter != "" && !contains(u.Name, sv.filter) && !contains(u.Description, sv.filter) {
-			continue
-		}
-		row := sv.createUnitRow(u)
-		sv.listBox.Append(row)
-		sv.units[i].row = row
-	}
+func (sv *ServicesView) createSectionLabel(text string) *gtk4.ListBoxRow {
+	row := gtk4.ListBoxRowNew()
+	row.SetSensitive(false)
+	label := gtk4.LabelNew(text)
+	label.SetHAlign(gtk4.AlignCenter)
+	label.SetMarginTop(8)
+	label.SetMarginBottom(4)
+	label.SetSensitive(false)
+	row.SetChild(&label.Widget)
+	return row
 }
 
-func (sv *ServicesView) createUnitRow(u model.SystemdUnit) *gtk4.ListBoxRow {
+func (sv *ServicesView) createServiceRow(s *model.ServiceUnit) *gtk4.ListBoxRow {
 	row := gtk4.ListBoxRowNew()
 	row.AddCSSClass("device-row")
 
 	hbox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
 
-	status := ""
-	stateClass := ""
-	switch u.ActiveState {
-	case "active":
-		status = "●"
-		stateClass = "service-active"
-	case "failed":
-		status = "✗"
-		stateClass = "service-failed"
-	default:
-		status = "○"
-		stateClass = "service-inactive"
-	}
+	statusIcon, statusText := serviceState(s)
+	icon := gtk4.ImageNewFromIconName(statusIcon)
+	icon.SetPixelSize(20)
+	hbox.Append(&icon.Widget)
 
-	statusLabel := gtk4.LabelNew(status)
-	statusLabel.AddCSSClass(stateClass)
-	slWidget := statusLabel.Widget
-	hbox.Append(&slWidget)
-
-	nameLabel := gtk4.LabelNew(u.Name)
+	nameLabel := gtk4.LabelNew(s.Name)
 	nameLabel.SetHExpand(true)
 	nameLabel.SetHAlign(gtk4.AlignStart)
-	nlWidget := nameLabel.Widget
-	hbox.Append(&nlWidget)
+	hbox.Append(&nameLabel.Widget)
 
-	descLabel := gtk4.LabelNew(u.Description)
-	descLabel.SetSensitive(false)
-	descLabel.SetHAlign(gtk4.AlignEnd)
-	dlWidget := descLabel.Widget
-	hbox.Append(&dlWidget)
+	stateLabel := gtk4.LabelNew(statusText)
+	stateLabel.SetSensitive(false)
+	hbox.Append(&stateLabel.Widget)
+
+	unitName := s.Name
+	isUser := s.IsUser
+	gearBtn := gtk4.ButtonNew()
+	gearBtn.SetIconName("emblem-system-symbolic")
+	gearBtn.OnClicked(func() {
+		uf, _ := sv.model.LoadUnitFile(unitName, isUser)
+		dlg := widget.NewServiceDialog(sv.parentWin, uf, unitName, isUser)
+		dlg.Present()
+	})
+	hbox.Append(&gearBtn.Widget)
 
 	hboxWidget := hbox.Widget
 	row.SetChild(&hboxWidget)
@@ -170,17 +178,42 @@ func (sv *ServicesView) createUnitRow(u model.SystemdUnit) *gtk4.ListBoxRow {
 	return row
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchSubstring(s, substr)
+func (sv *ServicesView) onRowSelected(row *gtk4.ListBoxRow) {
+	// selection tracks which service to toggle
 }
 
-func searchSubstring(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
+func (sv *ServicesView) onAction() {
+	selected := sv.listBox.GetSelectedRow()
+	if selected == nil {
+		return
 	}
-	return false
+	idx, ok := sv.rowPtrToIdx[selected.Widget.Ptr()]
+	if !ok || idx >= len(sv.items) {
+		return
+	}
+	s := sv.items[idx].service
+	if s.ActiveState == "active" {
+		sv.model.Stop(s.Name)
+	} else {
+		sv.model.Start(s.Name)
+	}
+	sv.refresh()
+}
+
+func serviceState(s *model.ServiceUnit) (string, string) {
+	switch s.ActiveState {
+	case "active":
+		return "media-playback-start-symbolic", "Running"
+	case "failed":
+		return "dialog-error-symbolic", "Failed"
+	case "inactive":
+		if s.SubState == "dead" {
+			return "media-playback-stop-symbolic", "Stopped"
+		}
+		return "media-playback-pause-symbolic", "Inactive"
+	default:
+		return "dialog-question-symbolic", s.ActiveState
+	}
 }
 
 func (sv *ServicesView) Widget() *gtk4.Widget { return &sv.box.Widget }
