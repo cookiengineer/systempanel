@@ -2,6 +2,8 @@
 
 An adaptive GTK4 system control panel built with Go and CGo. Detects available system tools at runtime and presents only the views you can actually use.
 
+![Demo](./docs/demo.gif)
+
 ## Features
 
 - **Adaptive sidebar** — views for missing dependencies appear grayed out rather than hidden
