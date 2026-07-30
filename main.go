@@ -10,7 +10,6 @@ import (
 
 	_ "github.com/cookiengineer/systempanel/css"
 
-	"github.com/cookiengineer/systempanel/view/power"
 	"github.com/cookiengineer/systempanel/view/settings"
 	"github.com/cookiengineer/systempanel/view/volume"
 	"github.com/cookiengineer/systempanel/view/wifi"
@@ -38,7 +37,6 @@ func registerViews() {
 		autostart.Descriptor,
 		journal.Descriptor,
 		battery.Descriptor,
-		power.Descriptor,
 		settings.Descriptor,
 	}
 }

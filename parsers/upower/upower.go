@@ -151,11 +151,12 @@ func parseUpowerFloat(s string) float64 {
 }
 
 func parseUpowerInt64(s string) int64 {
-	var n int64
-	for _, c := range s {
-		if c >= '0' && c <= '9' {
-			n = n*10 + int64(c-'0')
-		}
+	val := parseUpowerFloat(s)
+	if strings.Contains(s, "hours") {
+		return int64(val * 3600)
 	}
-	return n
+	if strings.Contains(s, "minutes") {
+		return int64(val * 60)
+	}
+	return int64(val)
 }

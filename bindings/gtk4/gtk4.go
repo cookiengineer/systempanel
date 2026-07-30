@@ -242,6 +242,7 @@ func gsigListBoxRow(instance unsafe.Pointer, signal string, fn func(*ListBoxRow)
 func gsigBool(instance unsafe.Pointer, signal string, fn func() bool)            { gsig(instance, signal, sigCloseRequest, fn) }
 func gsigBool3(instance unsafe.Pointer, signal string, fn func(uint,uint,uint) bool) { gsig(instance, signal, sigKeyPressed, fn) }
 func gsigScale(instance unsafe.Pointer, signal string, fn func(float64))          { gsig(instance, signal, sigScaleValue, fn) }
+func gsigNotifyActive(instance unsafe.Pointer, fn func())                           { gsig(instance, "notify::active", sigNotify, fn) }
 
 type Application struct{ Widget }
 func ApplicationNew(id string) *Application {
@@ -375,7 +376,7 @@ func (sw *Switch) SetActive(v bool) { C.gtk4SwitchSetActive(sw.ptr, cbool(v)) }
 func (sw *Switch) GetActive() bool { return C.gtk4SwitchGetActive(sw.ptr) != 0 }
 func (sw *Switch) SetState(v bool) { sw.SetActive(v) }
 func (sw *Switch) GetState() bool { return sw.GetActive() }
-func (sw *Switch) OnActivate(fn func()) { gsigVoid(sw.ptr, "activate", fn) }
+func (sw *Switch) OnActivate(fn func()) { gsigNotifyActive(sw.ptr, fn) }
 
 type Entry struct{ Widget }
 func EntryNew() *Entry { return &Entry{Widget{ptr: C.gtk4EntryNew()}} }

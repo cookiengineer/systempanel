@@ -134,6 +134,11 @@ func (p *SystemPanel) buildSidebar() {
 			if wv, ok := lazyView.(interface{ SetParentWindow(*gtk4.Window) }); ok {
 				wv.SetParentWindow(p.win)
 			}
+			if sv, ok := lazyView.(interface{ SetVisibilityCallback(func()) }); ok {
+				sv.SetVisibilityCallback(func() {
+					p.refreshSidebarVisibility()
+				})
+			}
 		} else {
 			placeholder := gtk4.LabelNew("Not available: required dependencies missing")
 			placeholder.SetHAlign(gtk4.AlignCenter)
@@ -152,6 +157,34 @@ func (p *SystemPanel) buildSidebar() {
 					p.sidebar.SelectRow(row)
 				}
 				break
+			}
+		}
+	}
+
+	p.refreshSidebarVisibility()
+}
+
+func (p *SystemPanel) refreshSidebarVisibility() {
+	if updated, err := config.Load(); err == nil {
+		p.settings = updated
+	}
+	for _, desc := range view.Registry {
+		if desc.Name == "settings" {
+			continue
+		}
+		row, ok := p.sidebarRows[desc.Name]
+		if !ok {
+			continue
+		}
+		if !desc.DetectFn() {
+			continue
+		}
+		visible := p.settings.IsVisible(desc.Name)
+		row.SetSensitive(visible)
+		if !visible && p.stack.GetVisibleChildName() == desc.Name {
+			p.stack.SetVisibleChildName("settings")
+			if sr, ok := p.sidebarRows["settings"]; ok {
+				p.sidebar.SelectRow(sr)
 			}
 		}
 	}
