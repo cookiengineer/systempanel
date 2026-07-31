@@ -192,7 +192,11 @@ func (mv *MonitorsView) createMonitorRow(m model.Monitor, all []model.Monitor) *
 	hbox.Append(&iconWidget)
 
 	infoBox := gtk4.BoxNew(gtk4.OrientationVertical, 2)
-	nameLabel := gtk4.LabelNew(m.Name)
+	displayName := m.Name
+	if m.Primary {
+		displayName += " (primary)"
+	}
+	nameLabel := gtk4.LabelNew(displayName)
 	nameLabel.SetHAlign(gtk4.AlignStart)
 	nlWidget := nameLabel.Widget
 	infoBox.Append(&nlWidget)

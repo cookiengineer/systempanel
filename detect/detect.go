@@ -117,7 +117,10 @@ func HasThemes() bool {
 	return false
 }
 
-// HasPulseAudio checks if the PulseAudio server is reachable via pactl.
+// HasWallpaperTool checks if a wallpaper-setting tool is available.
+func HasWallpaperTool() bool {
+	return HasProgram("feh") || HasProgram("hsetroot")
+}
 func HasPulseAudio() bool {
 	cmd := exec.Command("pactl", "info")
 	cmd.Stdout = nil

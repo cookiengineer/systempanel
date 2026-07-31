@@ -132,16 +132,17 @@ The Settings button in the headerbar toggles between the Settings view and the p
 3. Bluetooth
 4. Volume
 5. Monitors
-6. Brightness
-7. Services
-8. Autostart
-9. Journal
-10. Battery
-11. Power Profile
-12. Time & Date
-13. Themes
-14. Icons
-15. Settings
+6. Wallpapers
+7. Brightness
+8. Services
+9. Autostart
+10. Journal
+11. Battery
+12. Power Profile
+13. Time & Date
+14. Themes
+15. Icons
+16. Settings
 
 ## Runtime Detection
 
@@ -154,6 +155,7 @@ Each view registers a `DetectFn`. Detection uses `exec.LookPath` for binaries, `
 | Bluetooth | `bluetoothctl` + `/sys/class/bluetooth` |
 | Volume | `pactl` + PulseAudio server reachable (`pactl info`) |
 | Monitors | `xrandr` |
+| Wallpapers | `feh` or `hsetroot` |
 | Brightness | `brightnessctl` |
 | Services | `systemctl` + `/run/systemd/system` |
 | Journal | `journalctl` |
@@ -255,6 +257,9 @@ Uses `xrandr` for detection and control. Single ListBox with two sections:
 - **─ Arrangement ─**: Only shown when 2+ monitors are connected. Per monitor — port name, relation dropdown (Left of/Right of/Above/Below/Same as), and target monitor dropdown (other connected monitors). When only one monitor is connected, shows "Connect a second monitor to configure arrangement" message. Dropdowns are 100px wide, centered in the row.
 
 Apply button runs both resolution changes (`xrandr --output <name> --mode <res>`) and position changes (`xrandr --output <name> --<relation> <target>`) in sequence.
+
+### Wallpapers
+Sets the X11 root window wallpaper using `feh` or `hsetroot`. Scans `~/Pictures/Wallpapers/` for image files (jpg, jpeg, png, bmp, gif, webp). List items show a 64px thumbnail on the left and filename on the right. Bottom bar: Refresh button, Mode dropdown (scale/stretch/center/tile/max), and Save button. Shows placeholder messages when the directory is missing or contains no images.
 
 ### Brightness
 Slider-based backlight control via `brightnessctl`. Lists each backlight device (e.g. `intel_backlight`, `acpi_video0`) with a scale widget showing percentage. Adjusting the slider calls `brightnessctl set <percentage>%` for the selected device. Refresh button reloads current values.

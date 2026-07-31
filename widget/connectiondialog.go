@@ -175,6 +175,11 @@ func (d *ConnectionDialog) buildBottomBar() *gtk4.Box {
 	hbox.SetMarginTop(12)
 	hbox.SetMarginBottom(12)
 
+	cancelBtn := gtk4.ButtonNewWithLabel("Cancel")
+	cancelBtn.OnClicked(func() { d.win.Close() })
+	cbWidget := cancelBtn.Widget
+	hbox.Append(&cbWidget)
+
 	spacer := gtk4.LabelNew("")
 	spacer.SetHExpand(true)
 	spWidget := spacer.Widget

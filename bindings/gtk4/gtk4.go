@@ -45,6 +45,7 @@ extern void gtk4LabelSetWrap(void *lbl, int v);
 extern void gtk4LabelSetXAlign(void *lbl, float a);
 extern const char *gtk4LabelGetText(void *lbl);
 extern void *gtk4ImageNewFromIconName(const char *name);
+extern void *gtk4ImageNewFromFile(const char *path);
 extern void gtk4ImageSetIconName(void *img, const char *name);
 extern void gtk4ImageSetPixelSize(void *img, int size);
 extern void *gtk4StackNew(void);
@@ -339,6 +340,7 @@ func (l *Label) Text() string { return C.GoString(C.gtk4LabelGetText(l.ptr)) }
 
 type Image struct{ Widget }
 func ImageNewFromIconName(n string) *Image { cn:=C.CString(n); defer C.free(unsafe.Pointer(cn)); return &Image{Widget{ptr: C.gtk4ImageNewFromIconName(cn)}} }
+func ImageNewFromFile(path string) *Image { cp:=C.CString(path); defer C.free(unsafe.Pointer(cp)); return &Image{Widget{ptr: C.gtk4ImageNewFromFile(cp)}} }
 func (i *Image) SetIconName(n string) { cn:=C.CString(n); defer C.free(unsafe.Pointer(cn)); C.gtk4ImageSetIconName(i.ptr, cn) }
 func (i *Image) SetPixelSize(s int) { C.gtk4ImageSetPixelSize(i.ptr, C.int(s)) }
 

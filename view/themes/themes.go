@@ -12,7 +12,7 @@ import (
 var Descriptor = view.ViewDescriptor{
 	Name:     "themes",
 	Title:    "Themes",
-	IconName: "preferences-desktop-theme-symbolic",
+	IconName: "applications-graphics-symbolic",
 	DetectFn: func() bool { return detect.HasThemes() },
 	Factory:  func() view.View { return NewThemesView() },
 }
@@ -137,7 +137,7 @@ func (tv *ThemesView) onRowSelected(row *gtk4.ListBoxRow) {
 func (tv *ThemesView) Widget() *gtk4.Widget { return &tv.box.Widget }
 func (tv *ThemesView) Name() string          { return "themes" }
 func (tv *ThemesView) Title() string         { return "Themes" }
-func (tv *ThemesView) IconName() string      { return "preferences-desktop-theme-symbolic" }
+func (tv *ThemesView) IconName() string      { return "applications-graphics-symbolic" }
 func (tv *ThemesView) OnShow()               { tv.refresh() }
 func (tv *ThemesView) OnHide()               {}
 func (tv *ThemesView) Destroy()              {}

@@ -101,6 +101,7 @@ void gtk4LabelSetXAlign(void *lbl, float a) { gtk_label_set_xalign((GtkLabel*)lb
 const char *gtk4LabelGetText(void *lbl) { return gtk_label_get_text((GtkLabel*)lbl); }
 
 void *gtk4ImageNewFromIconName(const char *name) { return gtk_image_new_from_icon_name(name); }
+void *gtk4ImageNewFromFile(const char *path) { return gtk_image_new_from_file(path); }
 void gtk4ImageSetIconName(void *img, const char *name) { gtk_image_set_from_icon_name((GtkImage*)img, name); }
 void gtk4ImageSetPixelSize(void *img, int size) { gtk_image_set_pixel_size((GtkImage*)img, size); }
 

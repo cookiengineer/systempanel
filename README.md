@@ -7,7 +7,7 @@ An adaptive GTK4 system control panel built with Go and CGo. Detects available s
 ## Features
 
 - **Adaptive sidebar** — views for missing dependencies appear grayed out rather than hidden
-- **15 built-in views**: LAN, Wi-Fi, Bluetooth, Volume, Monitors, Brightness, Services, Autostart, Journal, Battery, Power Profile, Time & Date, Themes, Icons, Settings
+- **16 built-in views**: LAN, Wi-Fi, Bluetooth, Volume, Monitors, Wallpapers, Brightness, Services, Autostart, Journal, Battery, Power Profile, Time & Date, Themes, Icons, Settings
 - **Daemon auto-start** — Wi-Fi, LAN, Bluetooth, and Volume views detect inactive services and offer one-click start buttons
 - **Wi-Fi connection editor** — create/edit NetworkManager profiles with tabbed settings (Wi-Fi, Security, IPv4, IPv6)
 - **LAN connection management** — list and connect to Ethernet profiles
@@ -17,6 +17,7 @@ An adaptive GTK4 system control panel built with Go and CGo. Detects available s
 - **GTK theme switcher** — browse and apply GTK4/GTK3 themes instantly
 - **Icon theme switcher** — browse and apply icon themes instantly
 - **Monitor arrangement** — set resolution and relative positioning for multi-monitor setups via `xrandr`
+- **Wallpaper manager** — browse and set wallpapers from ~/Pictures/Wallpapers using `feh` or `hsetroot`
 - **Service unit editor** — inspect and edit systemd unit files with sudo
 - **Sudo dialog** — session-cached password with visibility toggle and pkexec fallback
 - **Zero third-party Go dependencies** — pure stdlib + GTK4 via CGo
@@ -30,6 +31,7 @@ An adaptive GTK4 system control panel built with Go and CGo. Detects available s
 | Bluetooth | `bluetoothctl` + hardware | Device scan, connect, disconnect, forget |
 | Volume | `pactl` + pulseaudio.service | Input/output device sliders, mute toggles |
 | Monitors | `xrandr` | Resolution selection, multi-monitor arrangement |
+| Wallpapers | `feh` or `hsetroot` | Browse and set wallpapers from ~/Pictures/Wallpapers |
 | Brightness | `brightnessctl` | Per-display backlight slider control |
 | Services | `systemctl` + systemd | Unit list with filter, start/stop/edit, user/system mode |
 | Autostart | `systemctl` + XDG autostart dir | Desktop file enable/disable switches |
