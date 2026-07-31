@@ -15,6 +15,7 @@ import (
 	"github.com/cookiengineer/systempanel/view/wifi"
 	"github.com/cookiengineer/systempanel/view/bluetooth"
 	"github.com/cookiengineer/systempanel/view/battery"
+	"github.com/cookiengineer/systempanel/view/brightness"
 	"github.com/cookiengineer/systempanel/view/monitors"
 	"github.com/cookiengineer/systempanel/view/services"
 	"github.com/cookiengineer/systempanel/view/autostart"
@@ -35,6 +36,7 @@ func registerViews() {
 		bluetooth.Descriptor,
 		volume.Descriptor,
 		monitors.Descriptor,
+		brightness.Descriptor,
 		services.Descriptor,
 		autostart.Descriptor,
 		journal.Descriptor,

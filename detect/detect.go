@@ -125,6 +125,11 @@ func HasPulseAudio() bool {
 	return cmd.Run() == nil
 }
 
+// HasPulseaudioService checks if pulseaudio.service exists as a user service.
+func HasPulseaudioService() bool {
+	return exec.Command("systemctl", "--user", "list-unit-files", "pulseaudio.service").Run() == nil
+}
+
 // DetectionResult holds all runtime detection results.
 type DetectionResult struct {
 	Programs map[string]bool

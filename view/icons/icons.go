@@ -29,6 +29,7 @@ type IconsView struct {
 	rowPtrToIdx map[unsafe.Pointer]int
 	items       []iconItem
 	rows        []*gtk4.ListBoxRow
+	currentIcon string
 }
 
 func NewIconsView() *IconsView {
@@ -85,30 +86,25 @@ func (iv *IconsView) refresh() {
 	iv.rowPtrToIdx = make(map[unsafe.Pointer]int)
 
 	icons, _ := iv.model.ListIcons()
-	current := iv.model.CurrentIcon()
+	iv.currentIcon = iv.model.CurrentIcon()
 
 	for _, ic := range icons {
-		row := iv.createIconRow(ic, current)
+		row := iv.createIconRow(ic)
 		iv.listBox.Append(row)
 		iv.rows = append(iv.rows, row)
 		iv.items = append(iv.items, iconItem{icon: ic, row: row})
 		iv.rowPtrToIdx[row.Widget.Ptr()] = len(iv.items) - 1
+		if ic.Name == iv.currentIcon {
+			iv.listBox.SelectRow(row)
+		}
 	}
 }
 
-func (iv *IconsView) createIconRow(ic model.Icon, current string) *gtk4.ListBoxRow {
+func (iv *IconsView) createIconRow(ic model.Icon) *gtk4.ListBoxRow {
 	row := gtk4.ListBoxRowNew()
 	row.AddCSSClass("device-row")
 
 	hbox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
-
-	iconName := "application-x-theme-symbolic"
-	if ic.Name == current {
-		iconName = "object-select-symbolic"
-	}
-	icon := gtk4.ImageNewFromIconName(iconName)
-	icon.SetPixelSize(20)
-	hbox.Append(&icon.Widget)
 
 	nameLabel := gtk4.LabelNew(ic.Name)
 	nameLabel.SetHExpand(true)
@@ -127,6 +123,7 @@ func (iv *IconsView) onRowSelected(row *gtk4.ListBoxRow) {
 		return
 	}
 	ic := iv.items[idx].icon
+	iv.currentIcon = ic.Name
 	iv.model.ApplyIcon(ic.Name)
 }
 

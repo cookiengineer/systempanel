@@ -12,7 +12,7 @@ var Descriptor = view.ViewDescriptor{
 	Title:    "Volume",
 	IconName: "audio-volume-high-symbolic",
 	DetectFn: func() bool {
-		return detect.HasProgram("pactl") && detect.HasPulseAudio()
+		return detect.HasProgram("pactl") && detect.HasPulseaudioService()
 	},
 	Factory: func() view.View { return NewVolumeView() },
 }
@@ -24,11 +24,12 @@ type volumeDeviceItem struct {
 }
 
 type VolumeView struct {
-	box     *gtk4.Box
-	model   *model.VolumeModel
-	listBox *gtk4.ListBox
-	items   []volumeDeviceItem
-	rows    []*gtk4.ListBoxRow
+	box        *gtk4.Box
+	model      *model.VolumeModel
+	listBox    *gtk4.ListBox
+	refreshBtn *gtk4.Button
+	items      []volumeDeviceItem
+	rows       []*gtk4.ListBoxRow
 }
 
 func NewVolumeView() *VolumeView {
@@ -68,15 +69,15 @@ func NewVolumeView() *VolumeView {
 	btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
 	btnBox.SetMarginTop(4)
 
-	refreshBtn := gtk4.ButtonNewWithLabel("Refresh")
-	refreshBtn.OnClicked(func() { vv.refresh() })
-	rbw := refreshBtn.Widget
+	vv.refreshBtn = gtk4.ButtonNewWithLabel("Refresh")
+	vv.refreshBtn.OnClicked(func() { vv.checkDaemonAndConfigureButton() })
+	rbw := vv.refreshBtn.Widget
 	btnBox.Append(&rbw)
 
 	btnBoxWidget := btnBox.Widget
 	vv.box.Append(&btnBoxWidget)
 
-	vv.refresh()
+	vv.checkDaemonAndConfigureButton()
 
 	return vv
 }
@@ -121,6 +122,20 @@ func (vv *VolumeView) refresh() {
 		row := gtk4.ListBoxRowNew()
 		row.SetChild(&lw)
 		vv.listBox.Append(row)
+	}
+}
+
+func (vv *VolumeView) checkDaemonAndConfigureButton() {
+	if vv.model.IsServiceRunning() {
+		vv.refreshBtn.SetLabel("Refresh")
+		vv.refreshBtn.OnClicked(func() { vv.refresh() })
+		vv.refresh()
+	} else {
+		vv.refreshBtn.SetLabel("Start Pulseaudio Daemon")
+		vv.refreshBtn.OnClicked(func() {
+			vv.model.StartService()
+			vv.checkDaemonAndConfigureButton()
+		})
 	}
 }
 
@@ -205,6 +220,6 @@ func (vv *VolumeView) Widget() *gtk4.Widget { return &vv.box.Widget }
 func (vv *VolumeView) Name() string          { return "volume" }
 func (vv *VolumeView) Title() string         { return "Volume" }
 func (vv *VolumeView) IconName() string      { return "audio-volume-high-symbolic" }
-func (vv *VolumeView) OnShow()               { vv.refresh() }
+func (vv *VolumeView) OnShow()               { vv.checkDaemonAndConfigureButton() }
 func (vv *VolumeView) OnHide()               {}
 func (vv *VolumeView) Destroy()              {}

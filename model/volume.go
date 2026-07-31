@@ -37,6 +37,14 @@ func (m *VolumeModel) Observe(fn Observer) func() {
 	return func() {}
 }
 
+func (m *VolumeModel) IsServiceRunning() bool {
+	return exec.Command("systemctl", "--user", "is-active", "--quiet", "pulseaudio.service").Run() == nil
+}
+
+func (m *VolumeModel) StartService() error {
+	return exec.Command("systemctl", "--user", "start", "pulseaudio.service").Run()
+}
+
 func (m *VolumeModel) ListSinks() ([]VolumeDevice, error) {
 	out, err := exec.Command("pactl", "list", "sinks").Output()
 	if err != nil {

@@ -26,6 +26,10 @@ type BluetoothModel struct {
 func (m *BluetoothModel) Refresh(ctx context.Context) error { return nil }
 func (m *BluetoothModel) Observe(fn Observer) func()        { return func() {} }
 
+func (m *BluetoothModel) IsServiceRunning() bool {
+	return exec.Command("systemctl", "is-active", "--quiet", "bluetooth.service").Run() == nil
+}
+
 func (m *BluetoothModel) ListDevices() ([]BluetoothDevice, error) {
 	out, err := exec.Command("bluetoothctl", "devices").Output()
 	if err != nil {

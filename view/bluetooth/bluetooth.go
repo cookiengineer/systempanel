@@ -1,15 +1,20 @@
 package bluetooth
 
 import (
+	"context"
 	"fmt"
+	"os/exec"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/cookiengineer/systempanel/bindings/gtk4"
 	"github.com/cookiengineer/systempanel/detect"
 	"github.com/cookiengineer/systempanel/model"
 	"github.com/cookiengineer/systempanel/view"
+	"github.com/cookiengineer/systempanel/widget"
 )
 
 var Descriptor = view.ViewDescriptor{
@@ -27,6 +32,7 @@ type BluetoothView struct {
 	model       *model.BluetoothModel
 	listBox     *gtk4.ListBox
 	connectBtn  *gtk4.Button
+	refreshBtn  *gtk4.Button
 	spinner     *gtk4.Spinner
 	devices     []btDeviceItem
 	rowPtrToIdx map[unsafe.Pointer]int
@@ -82,11 +88,11 @@ func NewBluetoothView() *BluetoothView {
 	btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
 	btnBox.SetMarginTop(4)
 
-	refreshBtn := gtk4.ButtonNewWithLabel("Refresh")
-	refreshBtn.OnClicked(func() {
-		bv.startScan()
+	bv.refreshBtn = gtk4.ButtonNewWithLabel("Refresh")
+	bv.refreshBtn.OnClicked(func() {
+		bv.checkDaemonAndConfigureButton()
 	})
-	rbw := refreshBtn.Widget
+	rbw := bv.refreshBtn.Widget
 	btnBox.Append(&rbw)
 
 	bv.spinner = gtk4.SpinnerNew()
@@ -107,12 +113,42 @@ func NewBluetoothView() *BluetoothView {
 	btnBoxWidget := btnBox.Widget
 	bv.box.Append(&btnBoxWidget)
 
-	bv.loadInitial()
+	bv.checkDaemonAndConfigureButton()
 
 	return bv
 }
 
 func (bv *BluetoothView) SetParentWindow(parent *gtk4.Window) { bv.parentWin = parent }
+
+func (bv *BluetoothView) checkDaemonAndConfigureButton() {
+	running := bv.model.IsServiceRunning()
+	if running {
+		bv.refreshBtn.SetLabel("Refresh")
+		bv.refreshBtn.OnClicked(func() { bv.startScan() })
+		bv.loadInitial()
+	} else {
+		bv.refreshBtn.SetLabel("Start Bluetooth Daemon")
+		bv.refreshBtn.OnClicked(func() { bv.startBluetoothDaemon() })
+	}
+}
+
+func (bv *BluetoothView) startBluetoothDaemon() {
+	widget.PromptForSudo(bv.parentWin, "Bluetooth daemon requires root privileges to start.", func(password string) {
+		if password == "" {
+			return
+		}
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			c := exec.CommandContext(ctx, "sudo", "-S", "-k", "systemctl", "start", "bluetooth.service")
+			c.Stdin = strings.NewReader(password + "\n")
+			c.Run()
+			gtk4.IdleAdd(func() {
+				bv.checkDaemonAndConfigureButton()
+			})
+		}()
+	})
+}
 
 func (bv *BluetoothView) loadInitial() {
 	go func() {
@@ -301,6 +337,6 @@ func (bv *BluetoothView) Widget() *gtk4.Widget { return &bv.box.Widget }
 func (bv *BluetoothView) Name() string          { return "bluetooth" }
 func (bv *BluetoothView) Title() string         { return "Bluetooth" }
 func (bv *BluetoothView) IconName() string      { return "bluetooth-active-symbolic" }
-func (bv *BluetoothView) OnShow()               { bv.loadInitial() }
+func (bv *BluetoothView) OnShow()               { bv.checkDaemonAndConfigureButton() }
 func (bv *BluetoothView) OnHide()               {}
 func (bv *BluetoothView) Destroy()              {}

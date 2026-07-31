@@ -23,12 +23,13 @@ type themeItem struct {
 }
 
 type ThemesView struct {
-	box         *gtk4.Box
-	model       *model.ThemeModel
-	listBox     *gtk4.ListBox
-	rowPtrToIdx map[unsafe.Pointer]int
-	items       []themeItem
-	rows        []*gtk4.ListBoxRow
+	box          *gtk4.Box
+	model        *model.ThemeModel
+	listBox      *gtk4.ListBox
+	rowPtrToIdx  map[unsafe.Pointer]int
+	items        []themeItem
+	rows         []*gtk4.ListBoxRow
+	currentTheme string
 }
 
 func NewThemesView() *ThemesView {
@@ -85,30 +86,25 @@ func (tv *ThemesView) refresh() {
 	tv.rowPtrToIdx = make(map[unsafe.Pointer]int)
 
 	themes, _ := tv.model.ListThemes()
-	current := tv.model.CurrentTheme()
+	tv.currentTheme = tv.model.CurrentTheme()
 
 	for _, t := range themes {
-		row := tv.createThemeRow(t, current)
+		row := tv.createThemeRow(t)
 		tv.listBox.Append(row)
 		tv.rows = append(tv.rows, row)
 		tv.items = append(tv.items, themeItem{theme: t, row: row})
 		tv.rowPtrToIdx[row.Widget.Ptr()] = len(tv.items) - 1
+		if t.Name == tv.currentTheme {
+			tv.listBox.SelectRow(row)
+		}
 	}
 }
 
-func (tv *ThemesView) createThemeRow(t model.Theme, current string) *gtk4.ListBoxRow {
+func (tv *ThemesView) createThemeRow(t model.Theme) *gtk4.ListBoxRow {
 	row := gtk4.ListBoxRowNew()
 	row.AddCSSClass("device-row")
 
 	hbox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
-
-	iconName := "preferences-desktop-theme-symbolic"
-	if t.Name == current {
-		iconName = "object-select-symbolic"
-	}
-	icon := gtk4.ImageNewFromIconName(iconName)
-	icon.SetPixelSize(20)
-	hbox.Append(&icon.Widget)
 
 	nameLabel := gtk4.LabelNew(t.Name)
 	nameLabel.SetHExpand(true)
@@ -134,6 +130,7 @@ func (tv *ThemesView) onRowSelected(row *gtk4.ListBoxRow) {
 		return
 	}
 	theme := tv.items[idx].theme
+	tv.currentTheme = theme.Name
 	tv.model.ApplyTheme(theme.Name)
 }
 

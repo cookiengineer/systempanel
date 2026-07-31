@@ -1,17 +1,18 @@
 package brightnessctl
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
-// Device represents a brightness-controllable device.
 type Device struct {
 	Name       string
-	Path       string
+	Class      string
 	Current    int
 	Max        int
-	Percentage float64
+	Percentage int
 }
 
-// ParseList parses "brightnessctl -l" output listing all devices.
 func ParseList(output string) []Device {
 	var devices []Device
 	lines := strings.Split(output, "\n")
@@ -20,61 +21,55 @@ func ParseList(output string) []Device {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, "'", 3)
-		if len(parts) < 2 {
-			continue
+		dev := parseLine(line)
+		if dev != nil {
+			devices = append(devices, *dev)
 		}
-		name := parts[1]
-		path := ""
-		if idx := strings.Index(line, "Device '"); idx >= 0 {
-			rest := line[idx+8+len(name)+1:]
-			rest = strings.TrimSpace(rest)
-			path = rest
-		}
-		devices = append(devices, Device{
-			Name: name,
-			Path: path,
-		})
 	}
 	return devices
 }
 
-// ParseInfo parses "brightnessctl -d <device> info" output.
 func ParseInfo(output string) *Device {
-	dev := &Device{}
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		colon := strings.Index(line, ":")
-		if colon < 0 {
-			continue
-		}
-		key := strings.TrimSpace(line[:colon])
-		value := strings.TrimSpace(line[colon+1:])
-		switch key {
-		case "Device":
-			dev.Name = value
-		case "Current brightness":
-			dev.Current = parseInt(value)
-		case "Max brightness":
-			dev.Max = parseInt(value)
+		dev := parseLine(line)
+		if dev != nil {
+			return dev
 		}
 	}
-	if dev.Max > 0 {
-		dev.Percentage = float64(dev.Current) / float64(dev.Max) * 100
-	}
-	return dev
+	return nil
 }
 
-func parseInt(s string) int {
-	var n int
-	for _, c := range s {
-		if c >= '0' && c <= '9' {
-			n = n*10 + int(c-'0')
+func parseLine(line string) *Device {
+	parts := strings.Split(line, ",")
+	if len(parts) < 5 {
+		return nil
+	}
+	current, err := strconv.Atoi(strings.TrimSpace(parts[2]))
+	if err != nil {
+		return nil
+	}
+	max, err := strconv.Atoi(strings.TrimSpace(parts[4]))
+	if err != nil {
+		return nil
+	}
+	percentStr := strings.TrimSuffix(strings.TrimSpace(parts[3]), "%")
+	percentage, err := strconv.Atoi(percentStr)
+	if err != nil {
+		percentage = 0
+		if max > 0 {
+			percentage = int(float64(current) / float64(max) * 100)
 		}
 	}
-	return n
+	return &Device{
+		Name:       strings.TrimSpace(parts[0]),
+		Class:      strings.TrimSpace(parts[1]),
+		Current:    current,
+		Max:        max,
+		Percentage: percentage,
+	}
 }

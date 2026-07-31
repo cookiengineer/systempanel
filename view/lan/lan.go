@@ -1,8 +1,10 @@
 package lan
 
 import (
+	"context"
 	"os/exec"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/cookiengineer/systempanel/bindings/gtk4"
@@ -25,6 +27,7 @@ type LANView struct {
 	box         *gtk4.Box
 	list        *gtk4.ListBox
 	connectBtn  *gtk4.Button
+	refreshBtn  *gtk4.Button
 	conns       []lanConnection
 	rowPtrToIdx map[unsafe.Pointer]int
 	parentWin   *gtk4.Window
@@ -76,9 +79,9 @@ func NewLANView() *LANView {
 	btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
 	btnBox.SetMarginTop(4)
 
-	refreshBtn := gtk4.ButtonNewWithLabel("Refresh")
-	refreshBtn.OnClicked(func() { lv.refresh() })
-	rbw := refreshBtn.Widget
+	lv.refreshBtn = gtk4.ButtonNewWithLabel("Refresh")
+	lv.refreshBtn.OnClicked(func() { lv.checkDaemonAndConfigureButton() })
+	rbw := lv.refreshBtn.Widget
 	btnBox.Append(&rbw)
 
 	spacer := gtk4.LabelNew("")
@@ -94,12 +97,45 @@ func NewLANView() *LANView {
 	btnBoxWidget := btnBox.Widget
 	lv.box.Append(&btnBoxWidget)
 
-	lv.refresh()
+	lv.checkDaemonAndConfigureButton()
 
 	return lv
 }
 
 func (lv *LANView) SetParentWindow(parent *gtk4.Window) { lv.parentWin = parent }
+
+func (lv *LANView) isServiceRunning() bool {
+	return exec.Command("systemctl", "is-active", "--quiet", "NetworkManager.service").Run() == nil
+}
+
+func (lv *LANView) checkDaemonAndConfigureButton() {
+	if lv.isServiceRunning() {
+		lv.refreshBtn.SetLabel("Refresh")
+		lv.refreshBtn.OnClicked(func() { lv.refresh() })
+		lv.refresh()
+	} else {
+		lv.refreshBtn.SetLabel("Start NetworkManager")
+		lv.refreshBtn.OnClicked(func() { lv.startNetworkManager() })
+	}
+}
+
+func (lv *LANView) startNetworkManager() {
+	widget.PromptForSudo(lv.parentWin, "NetworkManager requires root privileges to start.", func(password string) {
+		if password == "" {
+			return
+		}
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			c := exec.CommandContext(ctx, "sudo", "-S", "-k", "systemctl", "start", "NetworkManager.service")
+			c.Stdin = strings.NewReader(password + "\n")
+			c.Run()
+			gtk4.IdleAdd(func() {
+				lv.checkDaemonAndConfigureButton()
+			})
+		}()
+	})
+}
 
 func (lv *LANView) refresh() {
 	lv.selected = ""
@@ -192,6 +228,6 @@ func (lv *LANView) Widget() *gtk4.Widget { return &lv.box.Widget }
 func (lv *LANView) Name() string          { return "lan" }
 func (lv *LANView) Title() string         { return "LAN" }
 func (lv *LANView) IconName() string      { return "network-wired-symbolic" }
-func (lv *LANView) OnShow()               { lv.refresh() }
+func (lv *LANView) OnShow()               { lv.checkDaemonAndConfigureButton() }
 func (lv *LANView) OnHide()               {}
 func (lv *LANView) Destroy()              {}

@@ -23,6 +23,10 @@ type WiFiModel struct {
 func (m *WiFiModel) Refresh(ctx context.Context) error { return nil }
 func (m *WiFiModel) Observe(fn Observer) func()        { return func() {} }
 
+func (m *WiFiModel) IsServiceRunning() bool {
+	return exec.Command("systemctl", "is-active", "--quiet", "NetworkManager.service").Run() == nil
+}
+
 func (m *WiFiModel) Scan() ([]WiFiNetwork, error) {
 	out, err := exec.Command("nmcli", "-t", "-f", "IN-USE,SSID,MODE,CHAN,RATE,SIGNAL,SECURITY", "device", "wifi", "list").Output()
 	if err != nil {

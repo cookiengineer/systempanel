@@ -158,6 +158,8 @@ void *gtk4EntryNew(void) { return gtk_entry_new(); }
 void gtk4EntrySetText(void *e, const char *text) { gtk_entry_buffer_set_text(gtk_entry_get_buffer((GtkEntry*)e), text, -1); }
 const char *gtk4EntryGetText(void *e) { return gtk_entry_buffer_get_text(gtk_entry_get_buffer((GtkEntry*)e)); }
 void gtk4EntrySetPlaceholder(void *e, const char *text) { gtk_entry_set_placeholder_text((GtkEntry*)e, text); }
+void gtk4EntrySetVisibility(void *e, int v) { gtk_entry_set_visibility((GtkEntry*)e, v); }
+int gtk4EntryGetVisibility(void *e) { return gtk_entry_get_visibility((GtkEntry*)e); }
 
 void *gtk4CssProviderNew(void) { return gtk_css_provider_new(); }
 void gtk4CssLoadFromString(void *css, const char *data) { gtk_css_provider_load_from_string((GtkCssProvider*)css, data); }

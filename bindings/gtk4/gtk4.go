@@ -84,6 +84,8 @@ extern void *gtk4EntryNew(void);
 extern void gtk4EntrySetText(void *e, const char *text);
 extern const char *gtk4EntryGetText(void *e);
 extern void gtk4EntrySetPlaceholder(void *e, const char *text);
+extern void gtk4EntrySetVisibility(void *e, int v);
+extern int gtk4EntryGetVisibility(void *e);
 extern void *gtk4CssProviderNew(void);
 extern void gtk4CssLoadFromString(void *css, const char *data);
 extern void gtk4CssApplyToDisplay(void *css, unsigned int priority);
@@ -402,7 +404,8 @@ func EntryNew() *Entry { return &Entry{Widget{ptr: C.gtk4EntryNew()}} }
 func (e *Entry) SetText(t string) { ct:=C.CString(t); defer C.free(unsafe.Pointer(ct)); C.gtk4EntrySetText(e.ptr, ct) }
 func (e *Entry) GetText() string { return C.GoString(C.gtk4EntryGetText(e.ptr)) }
 func (e *Entry) SetPlaceholder(t string) { ct:=C.CString(t); defer C.free(unsafe.Pointer(ct)); C.gtk4EntrySetPlaceholder(e.ptr, ct) }
-func (e *Entry) SetVisibility(v bool) {}
+func (e *Entry) SetVisibility(v bool) { C.gtk4EntrySetVisibility(e.ptr, cbool(v)) }
+func (e *Entry) GetVisibility() bool  { return C.gtk4EntryGetVisibility(e.ptr) != 0 }
 func (e *Entry) OnChanged(fn func()) { gsigVoid(e.ptr, "changed", fn) }
 
 type CSS struct{ ptr unsafe.Pointer }

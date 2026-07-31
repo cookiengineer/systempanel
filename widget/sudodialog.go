@@ -16,12 +16,13 @@ var (
 )
 
 type SudoDialog struct {
-	win      *gtk4.Window
-	entry    *gtk4.Entry
-	errorLbl *gtk4.Label
-	parent   *gtk4.Window
-	message  string
-	callback func(string)
+	win           *gtk4.Window
+	entry         *gtk4.Entry
+	errorLbl      *gtk4.Label
+	parent        *gtk4.Window
+	message       string
+	callback      func(string)
+	visibilityBtn *gtk4.Button
 }
 
 func NewSudoDialog(parent *gtk4.Window) *SudoDialog {
@@ -92,6 +93,13 @@ func (sd *SudoDialog) build() {
 	sd.entry.SetHExpand(true)
 	entryWidget := sd.entry.Widget
 	passBox.Append(&entryWidget)
+
+	sd.visibilityBtn = gtk4.ButtonNew()
+	sd.visibilityBtn.SetIconName("view-conceal-symbolic")
+	sd.visibilityBtn.OnClicked(sd.toggleVisibility)
+	visWidget := sd.visibilityBtn.Widget
+	passBox.Append(&visWidget)
+
 	passBoxWidget := passBox.Widget
 	vbox.Append(&passBoxWidget)
 
@@ -138,10 +146,23 @@ func (sd *SudoDialog) build() {
 }
 
 func (sd *SudoDialog) cancel() {
-	if sd.callback != nil {
-		sd.callback("")
+	callback := sd.callback
+	sd.win.Hide()
+	sd.win.Destroy()
+	if callback != nil {
+		callback("")
 	}
-	sd.win.Close()
+}
+
+func (sd *SudoDialog) toggleVisibility() {
+	visible := sd.entry.GetVisibility()
+	if visible {
+		sd.entry.SetVisibility(false)
+		sd.visibilityBtn.SetIconName("view-conceal-symbolic")
+	} else {
+		sd.entry.SetVisibility(true)
+		sd.visibilityBtn.SetIconName("view-reveal-symbolic")
+	}
 }
 
 func (sd *SudoDialog) authenticate() {
@@ -153,10 +174,12 @@ func (sd *SudoDialog) authenticate() {
 		sessionMu.Lock()
 		sessionPassword = pw
 		sessionMu.Unlock()
-		if sd.callback != nil {
-			sd.callback(pw)
+		callback := sd.callback
+		sd.win.Hide()
+		sd.win.Destroy()
+		if callback != nil {
+			callback(pw)
 		}
-		sd.win.Close()
 	} else {
 		sd.entry.SetText("")
 		sd.errorLbl.SetText("Incorrect password. Please try again.")

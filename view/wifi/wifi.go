@@ -1,9 +1,12 @@
 package wifi
 
 import (
+	"context"
 	"fmt"
+	"os/exec"
 	"sort"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/cookiengineer/systempanel/bindings/gtk4"
@@ -28,6 +31,7 @@ type WiFiView struct {
 	model       *model.WiFiModel
 	listBox     *gtk4.ListBox
 	connectBtn  *gtk4.Button
+	refreshBtn  *gtk4.Button
 	spinner     *gtk4.Spinner
 	networks    []networkListItem
 	rowPtrToIdx map[unsafe.Pointer]int
@@ -82,9 +86,9 @@ func NewWiFiView() *WiFiView {
 	btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
 	btnBox.SetMarginTop(4)
 
-	refreshBtn := gtk4.ButtonNewWithLabel("Refresh")
-	refreshBtn.OnClicked(func() { wv.refresh() })
-	rbw := refreshBtn.Widget
+	wv.refreshBtn = gtk4.ButtonNewWithLabel("Refresh")
+	wv.refreshBtn.OnClicked(func() { wv.checkDaemonAndConfigureButton() })
+	rbw := wv.refreshBtn.Widget
 	btnBox.Append(&rbw)
 
 	wv.spinner = gtk4.SpinnerNew()
@@ -105,12 +109,42 @@ func NewWiFiView() *WiFiView {
 	btnBoxWidget := btnBox.Widget
 	wv.box.Append(&btnBoxWidget)
 
-	wv.refresh()
+	wv.checkDaemonAndConfigureButton()
 
 	return wv
 }
 
 func (wv *WiFiView) SetParentWindow(parent *gtk4.Window) { wv.parentWin = parent }
+
+func (wv *WiFiView) checkDaemonAndConfigureButton() {
+	running := wv.model.IsServiceRunning()
+	if running {
+		wv.refreshBtn.SetLabel("Refresh")
+		wv.refreshBtn.OnClicked(func() { wv.refresh() })
+		wv.refresh()
+	} else {
+		wv.refreshBtn.SetLabel("Start NetworkManager")
+		wv.refreshBtn.OnClicked(func() { wv.startNetworkManager() })
+	}
+}
+
+func (wv *WiFiView) startNetworkManager() {
+	widget.PromptForSudo(wv.parentWin, "NetworkManager requires root privileges to start.", func(password string) {
+		if password == "" {
+			return
+		}
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			c := exec.CommandContext(ctx, "sudo", "-S", "-k", "systemctl", "start", "NetworkManager.service")
+			c.Stdin = strings.NewReader(password + "\n")
+			c.Run()
+			gtk4.IdleAdd(func() {
+				wv.checkDaemonAndConfigureButton()
+			})
+		}()
+	})
+}
 
 func (wv *WiFiView) refresh() {
 	wv.selectedSSID = ""
@@ -282,6 +316,6 @@ func (wv *WiFiView) Widget() *gtk4.Widget { return &wv.box.Widget }
 func (wv *WiFiView) Name() string          { return "wifi" }
 func (wv *WiFiView) Title() string         { return "Wi-Fi" }
 func (wv *WiFiView) IconName() string      { return "network-wireless-symbolic" }
-func (wv *WiFiView) OnShow()               { wv.refresh() }
+func (wv *WiFiView) OnShow()               { wv.checkDaemonAndConfigureButton() }
 func (wv *WiFiView) OnHide()               {}
 func (wv *WiFiView) Destroy()              {}
