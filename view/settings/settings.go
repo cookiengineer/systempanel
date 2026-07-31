@@ -5,6 +5,7 @@ import (
 
 	"github.com/cookiengineer/systempanel/bindings/gtk4"
 	"github.com/cookiengineer/systempanel/config"
+	"github.com/cookiengineer/systempanel/parsers/gtktheme"
 	"github.com/cookiengineer/systempanel/view"
 )
 
@@ -60,7 +61,7 @@ func NewSettingsView() *SettingsView {
 	themeHeader.AddCSSClass("header-label")
 	sv.box.Append(&themeHeader.Widget)
 
-	darkRow := sv.createToggleRow("dark-mode", "Dark Mode", false)
+	darkRow := sv.createToggleRow("dark-mode", "Dark Mode", gtk4.GetDarkTheme())
 	sv.box.Append(&darkRow.Widget)
 
 	aboutBox := sv.buildAboutSection()
@@ -88,7 +89,9 @@ func (sv *SettingsView) createToggleRow(name, title string, active bool) *gtk4.B
 	sv.toggles[name] = sw
 	sw.OnActivate(func() {
 		if name == "dark-mode" {
-			gtk4.SetDarkTheme(sw.GetActive())
+			dark := sw.GetActive()
+			gtk4.SetDarkTheme(dark)
+			gtktheme.SaveDarkTheme(dark)
 			return
 		}
 		sv.settings.SetVisible(name, sw.GetActive())

@@ -198,6 +198,13 @@ void gtk4SetDarkTheme(int dark) {
 	g_object_set(settings, "gtk-application-prefer-dark-theme", dark ? TRUE : FALSE, NULL);
 }
 
+int gtk4GetDarkTheme(void) {
+	GtkSettings *settings = gtk_settings_get_default();
+	gboolean dark = FALSE;
+	g_object_get(settings, "gtk-application-prefer-dark-theme", &dark, NULL);
+	return dark;
+}
+
 void gtk4SetThemeName(const char *name) {
 	GtkSettings *settings = gtk_settings_get_default();
 	g_object_set(settings, "gtk-theme-name", name, NULL);

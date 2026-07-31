@@ -10,6 +10,7 @@ import (
 type Settings struct {
 	ThemeName     string
 	IconThemeName string
+	PreferDark    bool
 	Path          string
 }
 
@@ -41,6 +42,9 @@ func Load(path string) (*Settings, error) {
 		}
 		if key == "gtk-icon-theme-name" {
 			s.IconThemeName = value
+		}
+		if key == "gtk-application-prefer-dark-theme" {
+			s.PreferDark = value == "1" || value == "true"
 		}
 	}
 	return s, scanner.Err()
@@ -103,4 +107,31 @@ func setKey(content, key, value string) string {
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+func SaveDarkTheme(dark bool) error {
+	cfg, err := os.UserConfigDir()
+	if err != nil {
+		return err
+	}
+	val := "0"
+	if dark {
+		val = "1"
+	}
+	for _, ver := range []string{"gtk-3.0", "gtk-4.0"} {
+		dir := filepath.Join(cfg, ver)
+		os.MkdirAll(dir, 0755)
+		path := filepath.Join(dir, "settings.ini")
+		var content string
+		data, err := os.ReadFile(path)
+		if err != nil {
+			content = "[Settings]\ngtk-application-prefer-dark-theme=" + val + "\n"
+		} else {
+			content = setKey(string(data), "gtk-application-prefer-dark-theme", val)
+		}
+		if werr := os.WriteFile(path, []byte(content), 0644); werr != nil {
+			return werr
+		}
+	}
+	return nil
 }

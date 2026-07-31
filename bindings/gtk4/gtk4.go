@@ -112,6 +112,7 @@ extern void gtk4WidgetAddCssClass(void *w, const char *c);
 extern void gtk4WidgetSetName(void *w, const char *n);
 extern void gtk4WidgetSetTooltip(void *w, const char *t);
 extern void gtk4SetDarkTheme(int dark);
+extern int gtk4GetDarkTheme(void);
 extern void gtk4SetThemeName(const char *name);
 extern void gtk4SetIconThemeName(const char *name);
 
@@ -143,10 +144,14 @@ extern void gtk4StackSwitcherSetStack(void *sw, void *stack);
 import "C"
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime/cgo"
 	"strings"
 	"unsafe"
+
+	"github.com/cookiengineer/systempanel/parsers/gtktheme"
 )
 
 func init() {
@@ -478,6 +483,24 @@ func SetDarkTheme(dark bool) {
 	} else {
 		C.gtk4SetDarkTheme(0)
 	}
+}
+
+func GetDarkTheme() bool {
+	if C.gtk4GetDarkTheme() != 0 {
+		return true
+	}
+	out, err := exec.Command("gsettings", "get", "org.gnome.desktop.interface", "color-scheme").Output()
+	if err == nil && strings.TrimSpace(string(out)) == "'prefer-dark'" {
+		return true
+	}
+	cfg, err := os.UserConfigDir()
+	if err == nil {
+		settings, err := gtktheme.Load(filepath.Join(cfg, "gtk-4.0", "settings.ini"))
+		if err == nil && settings.PreferDark {
+			return true
+		}
+	}
+	return false
 }
 
 func SetThemeName(name string) {
