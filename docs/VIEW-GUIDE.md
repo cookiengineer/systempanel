@@ -404,16 +404,29 @@ Used for Wi-Fi and LAN connection editing. Pattern:
 
 ### Sudo / Privileged Operations
 
-Use `widget.RunSudoCommand(cmd, args...)` for any operation requiring root. The password is cached from the initial sudo dialog at startup.
+See [SUDO-DIALOG.md](SUDO-DIALOG.md) for the complete integration guide, including all patterns, the three-tier escalation chain, and critical rules for goroutine safety.
+
+Quick reference:
 
 ```go
+// Pattern 2: Button-triggered privileged command (most common for views)
+widget.PromptForSudo(view.parentWin, "Setting system time requires root privileges.", func(password string) {
+    if password == "" {
+        return
+    }
+    go func() {
+        ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+        defer cancel()
+        c := exec.CommandContext(ctx, "sudo", "-S", "-k", "timedatectl", "set-time", datetime)
+        c.Stdin = strings.NewReader(password + "\n")
+        c.Run()
+        gtk4.IdleAdd(func() { view.loadAsync() })
+    }()
+})
+
+// Model-layer: transparent escalation with cached password or pkexec fallback
 widget.RunSudoCommand("cp", tmpPath, systemPath)
 ```
-
-Fallback pattern in connection saves:
-1. Try direct `os.WriteFile` (if user has permissions)
-2. Try `RunSudoCommand` (cached sudo password or pkexec)
-3. Try `SudoDialog.RunCommand` (asks for password again)
 
 ### Reusable Dialogs
 
