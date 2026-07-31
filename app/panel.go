@@ -46,15 +46,15 @@ func New(app *gtk4.Application) *SystemPanel {
 
 func (p *SystemPanel) Build() {
 	p.win = gtk4.ApplicationWindowNew(p.app)
-	p.win.SetTitle("SystemPanel")
+	p.win.SetTitle("System Panel")
 	p.win.SetDefaultSize(900, 600)
 
 	p.header = gtk4.HeaderBarNew()
 	p.header.SetShowTitleButtons(true)
 	p.win.SetTitlebar(p.header)
 
-	titleLabel := gtk4.LabelNew("SystemPanel")
-	titleLabel.SetMarkup("<b>SystemPanel</b>")
+	titleLabel := gtk4.LabelNew("System Panel")
+	titleLabel.SetMarkup("<b>System Panel</b>")
 	p.header.SetTitleWidget(&titleLabel.Widget)
 
 	settingsBtn := gtk4.ButtonNew()

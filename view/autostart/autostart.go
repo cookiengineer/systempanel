@@ -47,6 +47,11 @@ func NewAutostartView() *AutostartView {
 	header.AddCSSClass("header-label")
 	av.box.Append(&header.Widget)
 
+	desc := gtk4.LabelNew("Manage applications that automatically start when you log in.")
+	desc.SetWrap(true)
+	desc.SetMarginBottom(12)
+	av.box.Append(&desc.Widget)
+
 	av.listBox = gtk4.ListBoxNew()
 	av.listBox.SetSelectionMode(gtk4.SelectionNone)
 
