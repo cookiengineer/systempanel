@@ -254,7 +254,11 @@ func (wv *WiFiView) createNetworkRow(item *networkListItem) *gtk4.ListBoxRow {
 	iconWidget := icon.Widget
 	hbox.Append(&iconWidget)
 
-	nameLabel := gtk4.LabelNew(item.network.SSID)
+	displayName := item.network.SSID
+	if displayName == "--" && item.network.BSSID != "" {
+		displayName = item.network.BSSID
+	}
+	nameLabel := gtk4.LabelNew(displayName)
 	nameLabel.SetHExpand(true)
 	nameLabel.SetHAlign(gtk4.AlignStart)
 	nlWidget := nameLabel.Widget

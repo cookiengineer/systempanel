@@ -152,6 +152,13 @@ func (bv *BatteryView) createBatteryRow(b model.BatteryInfo) *gtk4.ListBoxRow {
 	percentLabel := gtk4.LabelNew(infoText)
 	bottomBox.Append(&percentLabel.Widget)
 
+	if b.Capacity > 0 {
+		capText := fmt.Sprintf("Health: %.0f%%", b.Capacity)
+		capLabel := gtk4.LabelNew(capText)
+		capLabel.SetSensitive(false)
+		bottomBox.Append(&capLabel.Widget)
+	}
+
 	if b.TimeToEmpty > 0 {
 		hours := b.TimeToEmpty / 3600
 		minutes := (b.TimeToEmpty % 3600) / 60
@@ -170,13 +177,6 @@ func (bv *BatteryView) createBatteryRow(b model.BatteryInfo) *gtk4.ListBoxRow {
 	}
 
 	bottomBox.SetHExpand(true)
-
-	if b.Capacity > 0 {
-		capText := fmt.Sprintf("Health: %.0f%%", b.Capacity)
-		capLabel := gtk4.LabelNew(capText)
-		capLabel.SetSensitive(false)
-		bottomBox.Append(&capLabel.Widget)
-	}
 
 	vbox.Append(&bottomBox.Widget)
 

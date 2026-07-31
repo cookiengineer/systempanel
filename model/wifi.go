@@ -28,7 +28,7 @@ func (m *WiFiModel) IsServiceRunning() bool {
 }
 
 func (m *WiFiModel) Scan() ([]WiFiNetwork, error) {
-	out, err := exec.Command("nmcli", "-t", "-f", "IN-USE,SSID,MODE,CHAN,RATE,SIGNAL,SECURITY", "device", "wifi", "list").Output()
+	out, err := exec.Command("nmcli", "-t", "-f", "IN-USE,SSID,MODE,CHAN,RATE,SIGNAL,SECURITY,BSSID", "device", "wifi", "list").Output()
 	if err != nil {
 		return nil, err
 	}
