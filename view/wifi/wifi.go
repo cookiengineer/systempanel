@@ -237,7 +237,8 @@ func (wv *WiFiView) createNetworkRow(item *networkListItem) *gtk4.ListBoxRow {
 	row := gtk4.ListBoxRowNew()
 	row.AddCSSClass("device-row")
 
-	hbox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	grid := gtk4.GridNew()
+	grid.SetColumnSpacing(8)
 
 	iconName := "network-wireless-symbolic"
 	if item.network.Signal > 80 {
@@ -252,27 +253,43 @@ func (wv *WiFiView) createNetworkRow(item *networkListItem) *gtk4.ListBoxRow {
 	icon := gtk4.ImageNewFromIconName(iconName)
 	icon.SetPixelSize(20)
 	iconWidget := icon.Widget
-	hbox.Append(&iconWidget)
+	grid.Attach(&iconWidget, 0, 0, 1, 1)
 
 	displayName := item.network.SSID
-	if displayName == "--" && item.network.BSSID != "" {
+	if (displayName == "" || displayName == "--") && item.network.BSSID != "" {
 		displayName = item.network.BSSID
 	}
 	nameLabel := gtk4.LabelNew(displayName)
 	nameLabel.SetHExpand(true)
 	nameLabel.SetHAlign(gtk4.AlignStart)
-	nlWidget := nameLabel.Widget
-	hbox.Append(&nlWidget)
+	grid.Attach(&nameLabel.Widget, 1, 0, 1, 1)
+
+	if item.network.Channel > 0 {
+		chLabel := gtk4.LabelNew(fmt.Sprintf("%d", item.network.Channel))
+		chLabel.SetSensitive(false)
+		chLabel.SetHAlign(gtk4.AlignEnd)
+		chWidget := chLabel.Widget
+		chWidget.SetHExpand(false)
+		chWidget.SetSizeRequest(48, -1)
+		grid.Attach(&chWidget, 2, 0, 1, 1)
+	}
 
 	signalText := fmt.Sprintf("%d%%", item.network.Signal)
 	sigLabel := gtk4.LabelNew(signalText)
-	slWidget := sigLabel.Widget
-	hbox.Append(&slWidget)
+	sigLabel.SetSensitive(false)
+	sigLabel.SetHAlign(gtk4.AlignEnd)
+	sigWidget := sigLabel.Widget
+	sigWidget.SetHExpand(false)
+	sigWidget.SetSizeRequest(56, -1)
+	grid.Attach(&sigWidget, 3, 0, 1, 1)
 
 	secLabel := gtk4.LabelNew(item.network.Security)
 	secLabel.SetSensitive(false)
-	seclWidget := secLabel.Widget
-	hbox.Append(&seclWidget)
+	secLabel.SetHAlign(gtk4.AlignStart)
+	secWidget := secLabel.Widget
+	secWidget.SetHExpand(false)
+	secWidget.SetSizeRequest(100, -1)
+	grid.Attach(&secWidget, 4, 0, 1, 1)
 
 	if item.configured {
 		gearBtn := gtk4.ButtonNew()
@@ -282,12 +299,24 @@ func (wv *WiFiView) createNetworkRow(item *networkListItem) *gtk4.ListBoxRow {
 			dlg := widget.NewConnectionDialog(wv.parentWin, ssid)
 			dlg.Present()
 		})
-		gbWidget := gearBtn.Widget
-		hbox.Append(&gbWidget)
+		gearWidget := gearBtn.Widget
+		gearWidget.SetHExpand(false)
+		gearWidget.SetSizeRequest(36, -1)
+		grid.Attach(&gearWidget, 5, 0, 1, 1)
+	} else {
+		spacer := gtk4.LabelNew("")
+		spacerWidget := spacer.Widget
+		spacerWidget.SetHExpand(false)
+		spacerWidget.SetSizeRequest(36, -1)
+		grid.Attach(&spacerWidget, 5, 0, 1, 1)
 	}
 
-	hboxWidget := hbox.Widget
-	row.SetChild(&hboxWidget)
+	gridWidget := grid.Widget
+	gridWidget.SetMarginStart(4)
+	gridWidget.SetMarginEnd(4)
+	gridWidget.SetMarginTop(4)
+	gridWidget.SetMarginBottom(4)
+	row.SetChild(&gridWidget)
 
 	return row
 }

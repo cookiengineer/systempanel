@@ -488,12 +488,16 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 	if part.Label != "" {
 		partText += " [" + part.Label + "]"
 	}
-	partText += "  " + formatBytes(part.SizeBytes)
 
-	label := gtk4.LabelNew(partText)
-	label.SetHAlign(gtk4.AlignStart)
-	label.SetHExpand(true)
-	grid.Attach(&label.Widget, 0, row, 1, 1)
+	nameLabel := gtk4.LabelNew(partText)
+	nameLabel.SetHAlign(gtk4.AlignStart)
+	nameLabel.SetHExpand(true)
+	grid.Attach(&nameLabel.Widget, 0, row, 1, 1)
+
+	sizeLabel := gtk4.LabelNew(formatBytes(part.SizeBytes))
+	sizeLabel.SetHAlign(gtk4.AlignEnd)
+	sizeLabel.SetSensitive(false)
+	grid.Attach(&sizeLabel.Widget, 1, row, 1, 1)
 
 	fsText := ""
 	if part.IsEncrypted {
@@ -508,14 +512,14 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 		if part.IsEncrypted {
 			fsLabel.AddCSSClass("disk-health-warning")
 		}
-		grid.Attach(&fsLabel.Widget, 1, row, 1, 1)
+		grid.Attach(&fsLabel.Widget, 2, row, 1, 1)
 	}
 
 	if part.MountPoint != "" {
 		mountLabel := gtk4.LabelNew("\xe2\x86\x92 " + part.MountPoint)
 		mountLabel.AddCSSClass("disk-health-good")
 		mountLabel.SetHAlign(gtk4.AlignStart)
-		grid.Attach(&mountLabel.Widget, 2, row, 1, 1)
+		grid.Attach(&mountLabel.Widget, 3, row, 1, 1)
 
 		unmountBtn := gtk4.ButtonNewWithLabel("Unmount")
 		unmountBtn.SetSizeRequest(80, -1)
@@ -527,7 +531,7 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 				gtk4.IdleAdd(func() { dv.rescanOnly() })
 			}()
 		})
-		grid.Attach(&unmountBtn.Widget, 3, row, 1, 1)
+		grid.Attach(&unmountBtn.Widget, 4, row, 1, 1)
 	} else if part.IsEncrypted {
 		unlockBtn := gtk4.ButtonNewWithLabel("Unlock")
 		unlockBtn.SetSizeRequest(80, -1)
@@ -539,7 +543,7 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 				gtk4.IdleAdd(func() { dv.rescanOnly() })
 			}()
 		})
-		grid.Attach(&unlockBtn.Widget, 3, row, 1, 1)
+		grid.Attach(&unlockBtn.Widget, 4, row, 1, 1)
 	} else if part.FSType != "" {
 		mountBtn := gtk4.ButtonNewWithLabel("Mount")
 		mountBtn.SetSizeRequest(80, -1)
@@ -550,7 +554,7 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 				gtk4.IdleAdd(func() { dv.rescanOnly() })
 			}()
 		})
-		grid.Attach(&mountBtn.Widget, 3, row, 1, 1)
+		grid.Attach(&mountBtn.Widget, 4, row, 1, 1)
 	}
 }
 

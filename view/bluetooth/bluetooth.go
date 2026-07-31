@@ -265,9 +265,9 @@ func (bv *BluetoothView) createDeviceRow(item *btDeviceItem) *gtk4.ListBoxRow {
 
 	hbox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
 
-	iconName := "bluetooth-active-symbolic"
+	iconName := "bluetooth-disabled-symbolic"
 	if item.device.Connected {
-		iconName = "bluetooth-connected-symbolic"
+		iconName = "bluetooth-active-symbolic"
 	}
 	icon := gtk4.ImageNewFromIconName(iconName)
 	icon.SetPixelSize(20)

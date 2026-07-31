@@ -41,10 +41,10 @@ func ParseNetworks(output string) []Network {
 		n.Channel, _ = strconv.Atoi(fields[3])
 		n.Rate, _ = strconv.Atoi(fields[4])
 		n.Signal, _ = strconv.Atoi(fields[5])
-		n.Security = strings.Join(fields[6:], " ")
+		n.Security = fields[6]
 		n.BSSID = ""
 		if len(fields) > 7 {
-			n.BSSID = fields[7]
+			n.BSSID = unescape(strings.Join(fields[7:], ":"))
 		}
 		if len(fields) > 8 {
 			n.Bars = fields[8]

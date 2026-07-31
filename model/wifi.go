@@ -12,6 +12,7 @@ type WiFiNetwork struct {
 	SSID     string
 	BSSID    string
 	Signal   int
+	Channel  int
 	Security string
 	Active   bool
 }
@@ -39,6 +40,7 @@ func (m *WiFiModel) Scan() ([]WiFiNetwork, error) {
 			SSID:     n.SSID,
 			BSSID:    n.BSSID,
 			Signal:   n.Signal,
+			Channel:  n.Channel,
 			Security: n.Security,
 			Active:   n.Active,
 		})
