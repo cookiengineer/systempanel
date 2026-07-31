@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=SystemPanel
+Name=System Panel
 Comment=Adaptive GTK4 system control panel
 StartupNotify=true
 Exec=systempanel
