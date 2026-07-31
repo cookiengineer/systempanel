@@ -76,4 +76,5 @@ Settings are persisted as JSON in `$XDG_CONFIG_HOME/systempanel/settings.json`. 
 
 ## License
 
-GPLv3
+[GPL 3.0 or later](./GPL-3.0-or-later.txt)
+
