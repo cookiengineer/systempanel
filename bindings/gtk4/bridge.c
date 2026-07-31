@@ -36,6 +36,10 @@ static void _bridge_notify(GObject *obj, GParamSpec *pspec, gpointer data) {
 	goBridgeVoid((uintptr_t)data);
 }
 
+static void _bridge_spin_value_changed(GtkSpinButton *spin, gpointer data) {
+	goBridgeDouble((uintptr_t)data, gtk_spin_button_get_value(spin));
+}
+
 void connectGSignal(void *instance, const char *signal, int handlerType, uintptr_t handle) {
 	GCallback cb = NULL;
 	switch (handlerType) {
@@ -46,6 +50,7 @@ void connectGSignal(void *instance, const char *signal, int handlerType, uintptr
 	case 4: cb = G_CALLBACK(_bridge_close_request); break;
 	case 5: cb = G_CALLBACK(_bridge_scale_value_changed); break;
 	case 6: cb = G_CALLBACK(_bridge_notify); break;
+	case 7: cb = G_CALLBACK(_bridge_spin_value_changed); break;
 	}
 	if (cb) {
 		g_signal_connect_data(instance, signal, cb, (gpointer)(uintptr_t)handle, NULL, 0);
@@ -235,6 +240,15 @@ void *gtk4SpinButtonNew(double min, double max, double step) {
 }
 void gtk4SpinButtonSetValue(void *sb, double v) { gtk_spin_button_set_value((GtkSpinButton*)sb, v); }
 double gtk4SpinButtonGetValue(void *sb) { return gtk_spin_button_get_value((GtkSpinButton*)sb); }
+void gtk4SpinButtonSetText(void *sb, const char *text) { gtk_editable_set_text(GTK_EDITABLE(sb), text); }
+
+void *gtk4GridNew(void) { return gtk_grid_new(); }
+void gtk4GridAttach(void *g, void *child, int col, int row, int w, int h) {
+	gtk_grid_attach((GtkGrid*)g, (GtkWidget*)child, col, row, w, h);
+}
+void gtk4GridSetColumnHomogeneous(void *g, int v) { gtk_grid_set_column_homogeneous((GtkGrid*)g, v); }
+void gtk4GridSetRowSpacing(void *g, unsigned int s) { gtk_grid_set_row_spacing((GtkGrid*)g, s); }
+void gtk4GridSetColumnSpacing(void *g, unsigned int s) { gtk_grid_set_column_spacing((GtkGrid*)g, s); }
 
 void gtk4WindowSetModal(void *win, int modal) { gtk_window_set_modal((GtkWindow*)win, modal); }
 void gtk4WindowSetTransientFor(void *win, void *parent) { gtk_window_set_transient_for((GtkWindow*)win, (GtkWindow*)parent); }

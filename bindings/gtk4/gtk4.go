@@ -133,6 +133,13 @@ extern int gtk4CheckButtonGetActive(void *cb);
 extern void *gtk4SpinButtonNew(double min, double max, double step);
 extern void gtk4SpinButtonSetValue(void *sb, double v);
 extern double gtk4SpinButtonGetValue(void *sb);
+extern void gtk4SpinButtonSetText(void *sb, const char *text);
+
+extern void *gtk4GridNew(void);
+extern void gtk4GridAttach(void *g, void *child, int col, int row, int w, int h);
+extern void gtk4GridSetColumnHomogeneous(void *g, int v);
+extern void gtk4GridSetRowSpacing(void *g, unsigned int s);
+extern void gtk4GridSetColumnSpacing(void *g, unsigned int s);
 
 extern void gtk4WindowSetModal(void *win, int modal);
 extern void gtk4WindowSetTransientFor(void *win, void *parent);
@@ -178,6 +185,7 @@ const (
 	sigCloseRequest
 	sigScaleValue
 	sigNotify
+	sigSpinValue
 )
 
 //export goBridgeVoid
@@ -451,6 +459,7 @@ func (c *ComboBoxText) GetActiveText() string {
 	return C.GoString(s)
 }
 func (c *ComboBoxText) RemoveAll() { C.gtk4ComboBoxTextRemoveAll(c.ptr) }
+func (c *ComboBoxText) OnChanged(fn func()) { gsigVoid(c.ptr, "changed", fn) }
 
 type CheckButton struct{ Widget }
 func CheckButtonNew() *CheckButton { return &CheckButton{Widget{ptr: C.gtk4CheckButtonNew()}} }
@@ -460,6 +469,7 @@ func CheckButtonNewWithLabel(l string) *CheckButton {
 }
 func (cb *CheckButton) SetActive(v bool) { C.gtk4CheckButtonSetActive(cb.ptr, cbool(v)) }
 func (cb *CheckButton) GetActive() bool { return C.gtk4CheckButtonGetActive(cb.ptr) != 0 }
+func (cb *CheckButton) OnToggled(fn func())  { gsigNotifyActive(cb.ptr, fn) }
 
 type SpinButton struct{ Widget }
 func SpinButtonNew(min, max, step float64) *SpinButton {
@@ -467,6 +477,15 @@ func SpinButtonNew(min, max, step float64) *SpinButton {
 }
 func (s *SpinButton) SetValue(v float64) { C.gtk4SpinButtonSetValue(s.ptr, C.double(v)) }
 func (s *SpinButton) GetValue() float64 { return float64(C.gtk4SpinButtonGetValue(s.ptr)) }
+func (s *SpinButton) SetText(t string) { ct := C.CString(t); defer C.free(unsafe.Pointer(ct)); C.gtk4SpinButtonSetText(s.ptr, ct) }
+func (s *SpinButton) OnValueChanged(fn func(float64)) { gsig(s.ptr, "value-changed", sigSpinValue, fn) }
+
+type Grid struct{ Widget }
+func GridNew() *Grid { return &Grid{Widget{ptr: C.gtk4GridNew()}} }
+func (g *Grid) Attach(child *Widget, col, row, w, h int) { C.gtk4GridAttach(g.ptr, child.ptr, C.int(col), C.int(row), C.int(w), C.int(h)) }
+func (g *Grid) SetColumnHomogeneous(v bool) { C.gtk4GridSetColumnHomogeneous(g.ptr, cbool(v)) }
+func (g *Grid) SetRowSpacing(s uint) { C.gtk4GridSetRowSpacing(g.ptr, C.uint(s)) }
+func (g *Grid) SetColumnSpacing(s uint) { C.gtk4GridSetColumnSpacing(g.ptr, C.uint(s)) }
 
 type StackSwitcher struct{ Widget }
 func StackSwitcherNew() *StackSwitcher { return &StackSwitcher{Widget{ptr: C.gtk4StackSwitcherNew()}} }

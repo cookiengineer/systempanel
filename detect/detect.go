@@ -150,6 +150,7 @@ func RunAll() DetectionResult {
 			"upower":          HasProgram("upower"),
 			"brightnessctl":   HasProgram("brightnessctl"),
 			"powerprofilesctl": HasProgram("powerprofilesctl"),
+			"timedatectl":      HasProgram("timedatectl"),
 			"gammastep":       HasProgram("gammastep"),
 			"xrandr":          HasProgram("xrandr"),
 		},

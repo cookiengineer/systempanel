@@ -7,11 +7,13 @@ An adaptive GTK4 system control panel built with Go and CGo. Detects available s
 ## Features
 
 - **Adaptive sidebar** — views for missing dependencies appear grayed out rather than hidden
-- **13 built-in views**: LAN, Wi-Fi, Bluetooth, Volume, Brightness, Monitors, Services, Autostart, Journal, Battery, Themes, Icons, Settings
+- **15 built-in views**: LAN, Wi-Fi, Bluetooth, Volume, Monitors, Brightness, Services, Autostart, Journal, Battery, Power Profile, Time & Date, Themes, Icons, Settings
 - **Daemon auto-start** — Wi-Fi, LAN, Bluetooth, and Volume views detect inactive services and offer one-click start buttons
 - **Wi-Fi connection editor** — create/edit NetworkManager profiles with tabbed settings (Wi-Fi, Security, IPv4, IPv6)
 - **LAN connection management** — list and connect to Ethernet profiles
 - **Backlight control** — slider-based brightness adjustment per display via `brightnessctl`
+- **Power profile switching** — switch between power-saver, balanced, and performance modes via `powerprofilesctl`
+- **Time & Date** — set system time, date, timezone, and NTP toggle via `timedatectl`
 - **GTK theme switcher** — browse and apply GTK4/GTK3 themes instantly
 - **Icon theme switcher** — browse and apply icon themes instantly
 - **Monitor arrangement** — set resolution and relative positioning for multi-monitor setups via `xrandr`
@@ -27,12 +29,14 @@ An adaptive GTK4 system control panel built with Go and CGo. Detects available s
 | Wi-Fi | `nmcli` + wireless hardware | Network scan, connect, profile editor |
 | Bluetooth | `bluetoothctl` + hardware | Device scan, connect, disconnect, forget |
 | Volume | `pactl` + pulseaudio.service | Input/output device sliders, mute toggles |
-| Brightness | `brightnessctl` | Per-display backlight slider control |
 | Monitors | `xrandr` | Resolution selection, multi-monitor arrangement |
+| Brightness | `brightnessctl` | Per-display backlight slider control |
 | Services | `systemctl` + systemd | Unit list with filter, start/stop/edit, user/system mode |
 | Autostart | `systemctl` + XDG autostart dir | Desktop file enable/disable switches |
 | Journal | `journalctl` | Color-coded log viewer with priority and unit filter |
 | Battery | `upower` + battery hardware | Percentage, charge state, remaining time |
+| Power Profile | `powerprofilesctl` | Power-saver/balanced/performance mode switcher |
+| Time & Date | `timedatectl` | System time, date, timezone, NTP toggle |
 | Themes | `/usr/share/themes/` | GTK4/GTK3 theme browser with instant apply |
 | Icons | `/usr/share/icons/` | Icon theme browser with instant apply |
 | Settings | Always available | View visibility toggles, dark mode, about |

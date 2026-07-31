@@ -23,6 +23,8 @@ import (
 	"github.com/cookiengineer/systempanel/view/lan"
 	"github.com/cookiengineer/systempanel/view/themes"
 	"github.com/cookiengineer/systempanel/view/icons"
+	"github.com/cookiengineer/systempanel/view/powerprofile"
+	"github.com/cookiengineer/systempanel/view/timedate"
 )
 
 func init() {
@@ -41,6 +43,8 @@ func registerViews() {
 		autostart.Descriptor,
 		journal.Descriptor,
 		battery.Descriptor,
+		powerprofile.Descriptor,
+		timedate.Descriptor,
 		themes.Descriptor,
 		icons.Descriptor,
 		settings.Descriptor,
