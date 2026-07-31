@@ -112,6 +112,26 @@ const Stylesheet = `
 	padding: 4px 12px;
 	margin: 2px 0;
 }
+
+.disk-health-good {
+	color: #33d17a;
+	font-weight: bold;
+}
+
+.disk-health-ok {
+	color: #3584e4;
+	font-weight: bold;
+}
+
+.disk-health-warning {
+	color: #e5a50a;
+	font-weight: bold;
+}
+
+.disk-health-critical {
+	color: #d64937;
+	font-weight: bold;
+}
 `
 
 func init() {

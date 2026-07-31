@@ -121,6 +121,15 @@ func HasThemes() bool {
 func HasWallpaperTool() bool {
 	return HasProgram("feh") || HasProgram("hsetroot")
 }
+
+// HasDiskHardware checks for block devices in /sys/block.
+func HasDiskHardware() bool {
+	entries, err := filepath.Glob("/sys/block/[sv]d*")
+	if err != nil {
+		return false
+	}
+	return len(entries) > 0
+}
 func HasPulseAudio() bool {
 	cmd := exec.Command("pactl", "info")
 	cmd.Stdout = nil
@@ -159,8 +168,9 @@ func RunAll() DetectionResult {
 		},
 		Hardware: map[string]bool{
 			"wifi":      HasWiFiHardware(),
-			"battery":   HasBatteryHardware(),
+			"batteries": HasBatteryHardware(),
 			"bluetooth": HasBluetoothHardware(),
+			"disks":     HasDiskHardware(),
 		},
 		IsWayland: IsWayland(),
 		Desktop:   HasDesktopSession(),

@@ -1,4 +1,4 @@
-package battery
+package batteries
 
 import (
 	"fmt"
@@ -10,8 +10,8 @@ import (
 )
 
 var Descriptor = view.ViewDescriptor{
-	Name:     "battery",
-	Title:    "Battery",
+	Name:     "batteries",
+	Title:    "Batteries",
 	IconName: "battery-good-symbolic",
 	DetectFn: func() bool {
 		return detect.HasProgram("upower") && detect.HasBatteryHardware()
@@ -186,8 +186,8 @@ func (bv *BatteryView) createBatteryRow(b model.BatteryInfo) *gtk4.ListBoxRow {
 }
 
 func (bv *BatteryView) Widget() *gtk4.Widget { return &bv.box.Widget }
-func (bv *BatteryView) Name() string          { return "battery" }
-func (bv *BatteryView) Title() string         { return "Battery" }
+func (bv *BatteryView) Name() string          { return "batteries" }
+func (bv *BatteryView) Title() string         { return "Batteries" }
 func (bv *BatteryView) IconName() string      { return "battery-good-symbolic" }
 func (bv *BatteryView) OnShow()               { bv.refresh() }
 func (bv *BatteryView) OnHide()               {}

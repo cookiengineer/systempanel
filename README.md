@@ -7,7 +7,7 @@ An adaptive GTK4 system control panel built with Go and CGo. Detects available s
 ## Features
 
 - **Adaptive sidebar** — views for missing dependencies appear grayed out rather than hidden
-- **16 built-in views**: LAN, Wi-Fi, Bluetooth, Volume, Monitors, Wallpapers, Brightness, Services, Autostart, Journal, Battery, Power Profile, Time & Date, Themes, Icons, Settings
+- **17 built-in views**: LAN, Wi-Fi, Bluetooth, Volume, Monitors, Wallpapers, Brightness, Batteries, Disks, Services, Autostart, Journal, Power Profile, Time & Date, Themes, Icons, Settings
 - **Daemon auto-start** — Wi-Fi, LAN, Bluetooth, and Volume views detect inactive services and offer one-click start buttons
 - **Wi-Fi connection editor** — create/edit NetworkManager profiles with tabbed settings (Wi-Fi, Security, IPv4, IPv6)
 - **LAN connection management** — list and connect to Ethernet profiles
@@ -18,6 +18,8 @@ An adaptive GTK4 system control panel built with Go and CGo. Detects available s
 - **Icon theme switcher** — browse and apply icon themes instantly
 - **Monitor arrangement** — set resolution and relative positioning for multi-monitor setups via `xrandr`
 - **Wallpaper manager** — browse and set wallpapers from ~/Pictures/Wallpapers using `feh` or `hsetroot`
+- **Disk management** — mount/unmount partitions, unlock LUKS volumes via `udisksctl`
+- **S.M.A.R.T. health monitoring** — drive temperature, failure prediction, error rates via `smartctl`
 - **Service unit editor** — inspect and edit systemd unit files with sudo
 - **Sudo dialog** — session-cached password with visibility toggle and pkexec fallback
 - **Zero third-party Go dependencies** — pure stdlib + GTK4 via CGo
@@ -37,6 +39,7 @@ An adaptive GTK4 system control panel built with Go and CGo. Detects available s
 | Autostart | `systemctl` + XDG autostart dir | Desktop file enable/disable switches |
 | Journal | `journalctl` | Color-coded log viewer with priority and unit filter |
 | Battery | `upower` + battery hardware | Percentage, charge state, remaining time |
+| Disks | `lsblk` + `udisksctl` | Partition list, mount/unmount, LUKS unlock, S.M.A.R.T. health |
 | Power Profile | `powerprofilesctl` | Power-saver/balanced/performance mode switcher |
 | Time & Date | `timedatectl` | System time, date, timezone, NTP toggle |
 | Themes | `/usr/share/themes/` | GTK4/GTK3 theme browser with instant apply |

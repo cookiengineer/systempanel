@@ -15,13 +15,13 @@ SystemPanel is a GTK4 system control panel app written in Go with CGo bindings. 
 
 ```
 main.go → app/panel.go (SystemPanel orchestrator)
-           ├── view/         (16 files, View interface + ViewDescriptors + widget trees)
-           ├── model/        (14 files, Model interface + system state fetching)
+           ├── view/         (17 files, View interface + ViewDescriptors + widget trees)
+           ├── model/        (15 files, Model interface + system state fetching)
            ├── controller/   (Controller interface, currently unused)
            ├── detect/       (runtime dependency detection, 15+ checks)
            ├── config/       (JSON settings persistence)
            ├── css/          (embedded CSS provider)
-           ├── parsers/      (14 packages, CLI output parsers with public structs)
+           ├── parsers/      (16 packages, CLI output parsers with public structs)
            ├── widget/       (4 reusable dialogs: sudo, connection, service, desktop)
            └── bindings/gtk4/ (2 files, CGo GTK4 widget wrappers)
 ```
@@ -44,7 +44,8 @@ systempanel/
 │   ├── volume/                     # PulseAudio Input/Output devices, mute toggle, sliders
 │   ├── wifi/                       # nmcli WiFi networks + connection editor
 │   ├── bluetooth/                  # bluetoothctl async scan + signal strength
-│   ├── battery/                    # upower battery info
+│   ├── batteries/                  # upower battery info
+│   ├── disks/                       # lsblk + udisksctl + smartctl disk management
 │   ├── monitors/                   # xrandr resolution + arrangement control
 │   ├── brightness/                 # brightnessctl backlight slider control
 │   ├── services/                   # systemd unit management
@@ -134,15 +135,16 @@ The Settings button in the headerbar toggles between the Settings view and the p
 5. Monitors
 6. Wallpapers
 7. Brightness
-8. Services
-9. Autostart
-10. Journal
-11. Battery
-12. Power Profile
-13. Time & Date
-14. Themes
-15. Icons
-16. Settings
+8. Batteries
+9. Disks
+10. Services
+11. Autostart
+12. Journal
+13. Power Profile
+14. Time & Date
+15. Themes
+16. Icons
+17. Settings
 
 ## Runtime Detection
 
@@ -161,6 +163,7 @@ Each view registers a `DetectFn`. Detection uses `exec.LookPath` for binaries, `
 | Journal | `journalctl` |
 | Autostart | `systemctl` + `$XDG_CONFIG_HOME/autostart/` |
 | Battery | `upower` + `/sys/class/power_supply/BAT*` |
+| Disks | `lsblk` + `udisksctl` |
 | Power Profile | `powerprofilesctl` |
 | Time & Date | `timedatectl` |
 | Themes | `/usr/share/themes/*/gtk-4.0/gtk.css` or `gtk-3.0/gtk.css` |
@@ -273,8 +276,22 @@ Lists `.desktop` files from XDG autostart directories with name, icon, executabl
 ### Journal
 Fetches recent journal entries via `journalctl --output=json`. Color-coded by priority (emerg/err red, warning yellow, info green). Filter by priority and unit name. Refresh and Clear buttons. Inline log viewer with scrollable container.
 
-### Battery
+### Batteries
 Displays battery percentage via LevelBar, charge state, remaining time (to empty or full), capacity, model, and vendor. Uses `upower -i` for data. Supports multiple batteries.
+
+### Disks
+Lists connected storage devices (HDDs, SSDs, USB drives) with their partitions using `lsblk --json`. Shows device type, transport, serial, and human-readable sizes. Each partition row includes filesystem type, mount point, and action buttons:
+
+- **Mount/Unmount** — uses `udisksctl mount -b` / `udisksctl unmount -b`
+- **LUKS Unlock** — uses `udisksctl unlock -b` for encrypted volumes
+
+The **Refresh** button rescans via `lsblk` (no sudo required). If `smartctl` is available, it then prompts the Sudo Dialog (Pattern 2) and fetches S.M.A.R.T. health data for all drives via `smartctl --xall --json`. Health status is color-coded:
+
+- **Healthy** (green) — S.M.A.R.T. passed, no reallocated/pending/uncorrectable sectors
+- **Warning** (yellow) — elevated temperature or non-zero critical attribute counts
+- **FAILING** (red) — S.M.A.R.T. failed or attributes marked as `when_failed`
+
+Health details include a LevelBar, power-on hours, temperature (with warning threshold from the drive), and critical S.M.A.R.T. attributes (Reallocated Sectors, Current Pending Sectors, Uncorrectable Sectors, Wear Leveling Count). Mount/unmount/unlock actions trigger a fast rescan preserving existing S.M.A.R.T. data.
 
 ### Power Profile
 Radio-button-based profile switcher via `powerprofilesctl`. Shows available profiles (power-saver, balanced, performance) with the active profile indicated. Selecting a different profile calls `powerprofilesctl set <profile>`. Driver and degraded status shown when applicable.

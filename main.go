@@ -14,7 +14,7 @@ import (
 	"github.com/cookiengineer/systempanel/view/volume"
 	"github.com/cookiengineer/systempanel/view/wifi"
 	"github.com/cookiengineer/systempanel/view/bluetooth"
-	"github.com/cookiengineer/systempanel/view/battery"
+	"github.com/cookiengineer/systempanel/view/batteries"
 	"github.com/cookiengineer/systempanel/view/brightness"
 	"github.com/cookiengineer/systempanel/view/monitors"
 	"github.com/cookiengineer/systempanel/view/wallpapers"
@@ -26,6 +26,7 @@ import (
 	"github.com/cookiengineer/systempanel/view/icons"
 	"github.com/cookiengineer/systempanel/view/powerprofile"
 	"github.com/cookiengineer/systempanel/view/timedate"
+	"github.com/cookiengineer/systempanel/view/disks"
 )
 
 func init() {
@@ -41,10 +42,11 @@ func registerViews() {
 		monitors.Descriptor,
 		wallpapers.Descriptor,
 		brightness.Descriptor,
+		batteries.Descriptor,
+		disks.Descriptor,
 		services.Descriptor,
 		autostart.Descriptor,
 		journal.Descriptor,
-		battery.Descriptor,
 		powerprofile.Descriptor,
 		timedate.Descriptor,
 		themes.Descriptor,
