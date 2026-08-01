@@ -16,36 +16,6 @@ const Stylesheet = `
 	font-size: 13px;
 }
 
-.power-button {
-	border-radius: 12px;
-	padding: 20px;
-	min-height: 60px;
-}
-
-.power-button.shutdown {
-	background: #d64937;
-	color: white;
-}
-
-.power-button.reboot {
-	background: #e08a1e;
-	color: white;
-}
-
-.power-button.suspend {
-	background: #3584e4;
-	color: white;
-}
-
-.power-button.hibernate {
-	background: #9141ac;
-	color: white;
-}
-
-.power-button:hover {
-	opacity: 0.85;
-}
-
 .volume-slider {
 	margin: 4px 0;
 }
@@ -144,6 +114,10 @@ const Stylesheet = `
 	padding: 2px 6px;
 	margin: 2px;
 	background: alpha(@theme_fg_color, 0.08);
+}
+
+.monospace-label {
+	font-family: monospace;
 }
 `
 

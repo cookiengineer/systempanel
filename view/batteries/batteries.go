@@ -117,26 +117,25 @@ func (bv *BatteryView) createBatteryRow(b model.BatteryInfo) *gtk4.ListBoxRow {
 	icon.SetPixelSize(24)
 	topBox.Append(&icon.Widget)
 
-	infoBox := gtk4.BoxNew(gtk4.OrientationVertical, 2)
-	nameLabel := gtk4.LabelNew(b.Name)
-	nameLabel.SetHAlign(gtk4.AlignStart)
+
+	textLabel := b.Name
 	if b.Model != "" {
-		nameLabel.SetText(b.Name + " - " + b.Model)
+		textLabel += " - " + b.Model
 	}
-	infoBox.Append(&nameLabel.Widget)
-
 	if b.Vendor != "" {
-		vendorLabel := gtk4.LabelNew(b.Vendor)
-		vendorLabel.SetSensitive(false)
-		vendorLabel.SetHAlign(gtk4.AlignStart)
-		infoBox.Append(&vendorLabel.Widget)
+		textLabel += " [" + b.Vendor + "]"
 	}
-	topBox.Append(&infoBox.Widget)
 
-	topBox.SetHExpand(true)
+	nameLabel := gtk4.LabelNew(textLabel)
+	nameLabel.SetHAlign(gtk4.AlignStart)
+	nameLabel.SetHExpand(true)
 
 	stateLabel := gtk4.LabelNew(b.State)
 	stateLabel.SetSensitive(false)
+	stateLabel.SetHAlign(gtk4.AlignEnd)
+
+	topBox.SetHExpand(true)
+	topBox.Append(&nameLabel.Widget)
 	topBox.Append(&stateLabel.Widget)
 
 	vbox.Append(&topBox.Widget)
@@ -153,11 +152,16 @@ func (bv *BatteryView) createBatteryRow(b model.BatteryInfo) *gtk4.ListBoxRow {
 	bottomBox.Append(&percentLabel.Widget)
 
 	if b.Capacity > 0 {
-		capText := fmt.Sprintf("Health: %.0f%%", b.Capacity)
+		capText := fmt.Sprintf("(%.0f%% Capacity)", b.Capacity)
 		capLabel := gtk4.LabelNew(capText)
 		capLabel.SetSensitive(false)
+		capLabel.SetHAlign(gtk4.AlignCenter)
 		bottomBox.Append(&capLabel.Widget)
 	}
+
+	spacer := gtk4.LabelNew("")
+	spacer.SetHExpand(true)
+	bottomBox.Append(&spacer.Widget)
 
 	if b.TimeToEmpty > 0 {
 		hours := b.TimeToEmpty / 3600
@@ -165,14 +169,20 @@ func (bv *BatteryView) createBatteryRow(b model.BatteryInfo) *gtk4.ListBoxRow {
 		timeText := fmt.Sprintf("%dh %dm remaining", hours, minutes)
 		timeLabel := gtk4.LabelNew(timeText)
 		timeLabel.SetSensitive(false)
+		timeLabel.SetHAlign(gtk4.AlignEnd)
 		bottomBox.Append(&timeLabel.Widget)
-	}
-	if b.TimeToFull > 0 {
+	} else if b.TimeToFull > 0 {
 		hours := b.TimeToFull / 3600
 		minutes := (b.TimeToFull % 3600) / 60
 		timeText := fmt.Sprintf("%dh %dm until full", hours, minutes)
 		timeLabel := gtk4.LabelNew(timeText)
 		timeLabel.SetSensitive(false)
+		timeLabel.SetHAlign(gtk4.AlignEnd)
+		bottomBox.Append(&timeLabel.Widget)
+	} else {
+		timeLabel := gtk4.LabelNew("")
+		timeLabel.SetSensitive(false)
+		timeLabel.SetHAlign(gtk4.AlignEnd)
 		bottomBox.Append(&timeLabel.Widget)
 	}
 

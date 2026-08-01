@@ -205,13 +205,14 @@ func (dv *DiskView) createDiskRow(disk *model.DiskInfo) *gtk4.ListBoxRow {
 	infoBox := gtk4.BoxNew(gtk4.OrientationVertical, 2)
 
 	nameLine := gtk4.BoxNew(gtk4.OrientationHorizontal, 6)
-	nameStr := disk.Name
+	nameText := disk.Name
 	if disk.Model != "" {
-		nameStr = disk.Name + " \xe2\x80\x94 " + disk.Model
+		nameText += " - " + disk.Model
 	}
-	nameLabel := gtk4.LabelNew(nameStr)
+
+	nameLabel := gtk4.LabelNew(nameText)
 	nameLabel.SetHAlign(gtk4.AlignStart)
-	nameLabel.SetMarkup(fmt.Sprintf("<b>%s</b>", strings.ReplaceAll(nameStr, "&", "&amp;")))
+	nameLabel.SetMarkup(fmt.Sprintf("<b>%s</b>", strings.ReplaceAll(nameText, "&", "&amp;")))
 	nameLine.Append(&nameLabel.Widget)
 	infoBox.Append(&nameLine.Widget)
 
@@ -297,6 +298,7 @@ func (dv *DiskView) createHealthStatusBox(disk *model.DiskInfo) *gtk4.Widget {
 	if disk.Health == nil || !disk.Health.Available {
 		statusLabel := gtk4.LabelNew("S.M.A.R.T.\nunavailable")
 		statusLabel.SetSensitive(false)
+		statusLabel.SetSizeRequest(100, -1)
 		statusLabel.SetHAlign(gtk4.AlignEnd)
 		hbox.Append(&statusLabel.Widget)
 		w := hbox.Widget
@@ -490,16 +492,29 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 	if part.Label != "" {
 		partText += " [" + part.Label + "]"
 	}
+	if part.MountPoint != "" {
+		partText += " \xe2\x86\x92 " + part.MountPoint
+	}
 
 	nameLabel := gtk4.LabelNew(partText)
 	nameLabel.SetHAlign(gtk4.AlignStart)
 	nameLabel.SetHExpand(true)
+	nameLabel.SetMarkup(fmt.Sprintf("<b>%s</b>", strings.ReplaceAll(partText, "&", "&amp;")))
+	nameLabel.AddCSSClass("monospace-label")
 	grid.Attach(&nameLabel.Widget, 0, row, 1, 1)
+
+	sizeBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 0)
+	sizeBox.SetSizeRequest(80, -1)
 
 	sizeLabel := gtk4.LabelNew(formatBytes(part.SizeBytes))
 	sizeLabel.SetHAlign(gtk4.AlignEnd)
 	sizeLabel.SetSensitive(false)
-	grid.Attach(&sizeLabel.Widget, 1, row, 1, 1)
+	sizeLabel.AddCSSClass("monospace-label")
+	sizeBox.Append(&sizeLabel.Widget)
+	grid.Attach(&sizeBox.Widget, 1, row, 1, 1)
+
+	fsBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 0)
+	fsBox.SetSizeRequest(64, -1)
 
 	fsText := ""
 	if part.IsEncrypted {
@@ -511,20 +526,19 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 		fsLabel := gtk4.LabelNew(fsText)
 		fsLabel.SetHAlign(gtk4.AlignStart)
 		fsLabel.SetSensitive(!part.IsEncrypted)
+		fsLabel.AddCSSClass("monospace-label")
 		if part.IsEncrypted {
 			fsLabel.AddCSSClass("disk-health-warning")
 		}
-		grid.Attach(&fsLabel.Widget, 2, row, 1, 1)
+		fsBox.Append(&fsLabel.Widget)
 	}
+	grid.Attach(&fsBox.Widget, 2, row, 1, 1)
 
 	if part.MountPoint != "" {
-		mountLabel := gtk4.LabelNew("\xe2\x86\x92 " + part.MountPoint)
-		mountLabel.AddCSSClass("disk-health-good")
-		mountLabel.SetHAlign(gtk4.AlignStart)
-		grid.Attach(&mountLabel.Widget, 3, row, 1, 1)
 
 		unmountBtn := gtk4.ButtonNewWithLabel("Unmount")
-		unmountBtn.SetSizeRequest(80, -1)
+		unmountBtn.SetSizeRequest(100, -1)
+		unmountBtn.SetHAlign(gtk4.AlignEnd)
 		partPath := part.DevicePath
 		mapperPath := part.MapperPath
 		isEnc := part.IsEncrypted
@@ -552,10 +566,17 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 				},
 			)
 		})
-		grid.Attach(&unmountBtn.Widget, 4, row, 1, 1)
+
+		btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 0)
+		btnBox.SetHAlign(gtk4.AlignEnd)
+		btnBox.Append(&unmountBtn.Widget)
+		grid.Attach(&btnBox.Widget, 3, row, 1, 1)
+
 	} else if part.FSType != "" || part.IsEncrypted {
+
 		mountBtn := gtk4.ButtonNewWithLabel("Mount")
-		mountBtn.SetSizeRequest(80, -1)
+		mountBtn.SetSizeRequest(100, -1)
+		mountBtn.SetHAlign(gtk4.AlignEnd)
 		p := part
 		mountBtn.OnClicked(func() {
 			widget.ShowMountDialog(dv.parentWin, p.DevicePath, p.Name, p.IsEncrypted, p.IsUnlocked, p.MapperName, func() {
@@ -565,7 +586,12 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 				}()
 			})
 		})
-		grid.Attach(&mountBtn.Widget, 4, row, 1, 1)
+
+		btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 0)
+		btnBox.SetHAlign(gtk4.AlignEnd)
+		btnBox.Append(&mountBtn.Widget)
+		grid.Attach(&btnBox.Widget, 3, row, 1, 1)
+
 	}
 }
 
