@@ -1,5 +1,5 @@
 pkgname=systempanel-git
-pkgver=r20.36856cc
+pkgver=r22.6e71ed7
 pkgrel=1
 pkgdesc="Adaptive GTK4 system control panel"
 arch=('x86_64' 'aarch64')

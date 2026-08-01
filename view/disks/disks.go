@@ -1,7 +1,9 @@
 package disks
 
 import (
+	"context"
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -524,35 +526,44 @@ func (dv *DiskView) attachPartitionRow(grid *gtk4.Grid, row int, part *model.Par
 		unmountBtn := gtk4.ButtonNewWithLabel("Unmount")
 		unmountBtn.SetSizeRequest(80, -1)
 		partPath := part.DevicePath
+		mapperPath := part.MapperPath
+		isEnc := part.IsEncrypted
+		source := partPath
+		if isEnc && mapperPath != "" {
+			source = mapperPath
+		}
+
 		unmountBtn.OnClicked(func() {
-			go func() {
-				dv.model.UnmountPartition(partPath)
-				time.Sleep(500 * time.Millisecond)
-				gtk4.IdleAdd(func() { dv.rescanOnly() })
-			}()
+			widget.PromptForSudo(dv.parentWin,
+				"Unmounting requires root privileges.",
+				func(password string) {
+					if password == "" {
+						return
+					}
+					go func() {
+						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+						defer cancel()
+						c := exec.CommandContext(ctx, "sudo", "-S", "-k", "umount", source)
+						c.Stdin = strings.NewReader(password + "\n")
+						c.Run()
+						time.Sleep(500 * time.Millisecond)
+						gtk4.IdleAdd(func() { dv.rescanOnly() })
+					}()
+				},
+			)
 		})
 		grid.Attach(&unmountBtn.Widget, 4, row, 1, 1)
-	} else if part.IsEncrypted {
-		unlockBtn := gtk4.ButtonNewWithLabel("Unlock")
-		unlockBtn.SetSizeRequest(80, -1)
-		partPath := part.DevicePath
-		unlockBtn.OnClicked(func() {
-			go func() {
-				dv.model.UnlockLUKS(partPath)
-				time.Sleep(1 * time.Second)
-				gtk4.IdleAdd(func() { dv.rescanOnly() })
-			}()
-		})
-		grid.Attach(&unlockBtn.Widget, 4, row, 1, 1)
-	} else if part.FSType != "" {
+	} else if part.FSType != "" || part.IsEncrypted {
 		mountBtn := gtk4.ButtonNewWithLabel("Mount")
 		mountBtn.SetSizeRequest(80, -1)
-		partPath := part.DevicePath
+		p := part
 		mountBtn.OnClicked(func() {
-			go func() {
-				dv.model.MountPartition(partPath)
-				gtk4.IdleAdd(func() { dv.rescanOnly() })
-			}()
+			widget.ShowMountDialog(dv.parentWin, p.DevicePath, p.Name, p.IsEncrypted, p.IsUnlocked, p.MapperName, func() {
+				go func() {
+					time.Sleep(500 * time.Millisecond)
+					gtk4.IdleAdd(func() { dv.rescanOnly() })
+				}()
+			})
 		})
 		grid.Attach(&mountBtn.Widget, 4, row, 1, 1)
 	}

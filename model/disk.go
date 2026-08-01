@@ -35,6 +35,9 @@ type PartitionInfo struct {
 	Label       string
 	UUID        string
 	IsEncrypted bool
+	IsUnlocked  bool
+	MapperPath  string
+	MapperName  string
 }
 
 type DiskModel struct {
@@ -68,7 +71,7 @@ func (m *DiskModel) ListDisks() ([]DiskInfo, error) {
 		}
 
 		for _, child := range dev.Children {
-			disk.Partitions = append(disk.Partitions, PartitionInfo{
+			part := PartitionInfo{
 				Name:        child.Name,
 				DevicePath:  child.DevicePath(),
 				SizeBytes:   child.BytesSize(),
@@ -77,7 +80,19 @@ func (m *DiskModel) ListDisks() ([]DiskInfo, error) {
 				Label:       child.LabelName(),
 				UUID:        child.UUIDString(),
 				IsEncrypted: child.FSTypeName() == "crypto_LUKS",
-			})
+			}
+
+			if part.IsEncrypted && len(child.Children) > 0 {
+				part.IsUnlocked = true
+				cryptChild := child.Children[0]
+				part.MapperPath = cryptChild.DevicePath()
+				part.MapperName = cryptChild.Name
+				if mp := cryptChild.MountPointPath(); mp != "" {
+					part.MountPoint = mp
+				}
+			}
+
+			disk.Partitions = append(disk.Partitions, part)
 		}
 
 		if len(disk.Partitions) == 0 && dev.FSTypeName() != "" {
