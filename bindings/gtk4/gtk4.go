@@ -148,6 +148,32 @@ extern unsigned int gtk4IdleAdd(uintptr_t data);
 
 extern void *gtk4StackSwitcherNew(void);
 extern void gtk4StackSwitcherSetStack(void *sw, void *stack);
+
+extern void goBridgeFileDialogPath(uintptr_t data, char *path, char *errorMsg);
+
+extern void *gtk4FileDialogNew(void);
+extern void gtk4FileDialogSetTitle(void *dialog, const char *title);
+extern void gtk4FileDialogSetAcceptLabel(void *dialog, const char *label);
+extern void gtk4FileDialogOpen(void *dialog, void *parent, uintptr_t handle);
+extern void gtk4FileDialogSelectFolder(void *dialog, void *parent, uintptr_t handle);
+extern void gtk4FileDialogSetDefaultFilter(void *dialog, void *filter);
+
+extern void *gtk4FileFilterNew(void);
+extern void gtk4FileFilterAddMimeType(void *filter, const char *mime);
+extern void gtk4FileFilterSetName(void *filter, const char *name);
+
+extern void *gtk4TextViewNew(void);
+extern void gtk4TextViewSetText(void *view, const char *text);
+extern char *gtk4TextViewGetText(void *view);
+extern void gtk4TextViewSetEditable(void *view, int editable);
+
+extern void *gtk4FlowBoxNew(void);
+extern void gtk4FlowBoxInsert(void *box, void *child, int pos);
+extern void gtk4FlowBoxRemove(void *box, void *child);
+extern void gtk4FlowBoxSetSelectionMode(void *box, int mode);
+extern void gtk4FlowBoxSetMaxChildrenPerLine(void *box, unsigned int n);
+extern void gtk4FlowBoxSetRowSpacing(void *box, unsigned int s);
+extern void gtk4FlowBoxSetColumnSpacing(void *box, unsigned int s);
 */
 import "C"
 
@@ -218,6 +244,21 @@ func goBridgeBool(data C.uintptr_t) C.int {
 //export goBridgeDouble
 func goBridgeDouble(data C.uintptr_t, val C.double) {
 	cgo.Handle(uintptr(data)).Value().(func(float64))(float64(val))
+}
+
+//export goBridgeFileDialogPath
+func goBridgeFileDialogPath(data C.uintptr_t, path *C.char, errMsg *C.char) {
+	h := cgo.Handle(uintptr(data))
+	p := ""
+	if path != nil {
+		p = C.GoString(path)
+	}
+	em := ""
+	if errMsg != nil {
+		em = C.GoString(errMsg)
+	}
+	h.Value().(func(string, string))(p, em)
+	h.Delete()
 }
 
 //export goBridgeIdle
@@ -534,4 +575,88 @@ func SetIconThemeName(name string) {
 	cn := C.CString(name)
 	defer C.free(unsafe.Pointer(cn))
 	C.gtk4SetIconThemeName(cn)
+}
+
+type FileDialog struct{ ptr unsafe.Pointer }
+func FileDialogNew() *FileDialog { return &FileDialog{ptr: C.gtk4FileDialogNew()} }
+func (fd *FileDialog) SetTitle(t string) {
+	ct := C.CString(t); defer C.free(unsafe.Pointer(ct))
+	C.gtk4FileDialogSetTitle(fd.ptr, ct)
+}
+func (fd *FileDialog) SetAcceptLabel(l string) {
+	cl := C.CString(l); defer C.free(unsafe.Pointer(cl))
+	C.gtk4FileDialogSetAcceptLabel(fd.ptr, cl)
+}
+func (fd *FileDialog) Open(parent *Window, callback func(path string, err string)) {
+	wrapped := func(p string, e string) { callback(p, e) }
+	h := cgo.NewHandle(wrapped)
+	var parentPtr unsafe.Pointer
+	if parent != nil {
+		parentPtr = parent.ptr
+	}
+	C.gtk4FileDialogOpen(fd.ptr, parentPtr, C.uintptr_t(uintptr(h)))
+}
+func (fd *FileDialog) SelectFolder(parent *Window, callback func(path string, err string)) {
+	wrapped := func(p string, e string) { callback(p, e) }
+	h := cgo.NewHandle(wrapped)
+	var parentPtr unsafe.Pointer
+	if parent != nil {
+		parentPtr = parent.ptr
+	}
+	C.gtk4FileDialogSelectFolder(fd.ptr, parentPtr, C.uintptr_t(uintptr(h)))
+}
+func (fd *FileDialog) SetDefaultFilter(f *FileFilter) {
+	C.gtk4FileDialogSetDefaultFilter(fd.ptr, f.ptr)
+}
+
+type FileFilter struct{ ptr unsafe.Pointer }
+func FileFilterNew() *FileFilter { return &FileFilter{ptr: C.gtk4FileFilterNew()} }
+func (f *FileFilter) AddMimeType(mime string) {
+	cm := C.CString(mime); defer C.free(unsafe.Pointer(cm))
+	C.gtk4FileFilterAddMimeType(f.ptr, cm)
+}
+func (f *FileFilter) SetName(name string) {
+	cn := C.CString(name); defer C.free(unsafe.Pointer(cn))
+	C.gtk4FileFilterSetName(f.ptr, cn)
+}
+
+type TextView struct{ Widget }
+func TextViewNew() *TextView {
+	return &TextView{Widget{ptr: C.gtk4TextViewNew()}}
+}
+func (tv *TextView) SetText(t string) {
+	ct := C.CString(t); defer C.free(unsafe.Pointer(ct))
+	C.gtk4TextViewSetText(tv.ptr, ct)
+}
+func (tv *TextView) GetText() string {
+	s := C.gtk4TextViewGetText(tv.ptr)
+	if s == nil {
+		return ""
+	}
+	defer C.free(unsafe.Pointer(s))
+	return C.GoString(s)
+}
+func (tv *TextView) SetEditable(v bool) {
+	C.gtk4TextViewSetEditable(tv.ptr, cbool(v))
+}
+
+type FlowBox struct{ Widget }
+func FlowBoxNew() *FlowBox { return &FlowBox{Widget{ptr: C.gtk4FlowBoxNew()}} }
+func (fb *FlowBox) Insert(child *Widget, pos int) {
+	C.gtk4FlowBoxInsert(fb.ptr, child.ptr, C.int(pos))
+}
+func (fb *FlowBox) Remove(child *Widget) {
+	C.gtk4FlowBoxRemove(fb.ptr, child.ptr)
+}
+func (fb *FlowBox) SetSelectionMode(mode SelectionMode) {
+	C.gtk4FlowBoxSetSelectionMode(fb.ptr, C.int(mode))
+}
+func (fb *FlowBox) SetMaxChildrenPerLine(n uint) {
+	C.gtk4FlowBoxSetMaxChildrenPerLine(fb.ptr, C.uint(n))
+}
+func (fb *FlowBox) SetRowSpacing(s uint) {
+	C.gtk4FlowBoxSetRowSpacing(fb.ptr, C.uint(s))
+}
+func (fb *FlowBox) SetColumnSpacing(s uint) {
+	C.gtk4FlowBoxSetColumnSpacing(fb.ptr, C.uint(s))
 }

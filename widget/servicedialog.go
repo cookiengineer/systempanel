@@ -4,15 +4,150 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/cookiengineer/systempanel/bindings/gtk4"
 	"github.com/cookiengineer/systempanel/parsers/systemdunit"
 )
 
-type capCheck struct {
-	check *gtk4.CheckButton
-	label string
+type tagPill struct {
+	box    *gtk4.Box
+	label  string
+}
+
+type tagListWidget struct {
+	combo     *gtk4.ComboBoxText
+	flow      *gtk4.Box
+	pills     []tagPill
+	options   []string
+	onChanged func()
+}
+
+func newTagListWidget(options []string) *tagListWidget {
+	tl := &tagListWidget{
+		options: options,
+	}
+	tl.combo = gtk4.ComboBoxTextNewWithEntry()
+	tl.combo.SetHExpand(true)
+	for _, o := range options {
+		tl.combo.Append(o, o)
+	}
+	tl.combo.OnChanged(func() {
+		id := tl.combo.GetActiveID()
+		if id != "" {
+			tl.addPill(id)
+			tl.combo.SetActive(-1)
+		}
+	})
+
+	tl.flow = gtk4.BoxNew(gtk4.OrientationHorizontal, 4)
+	tl.flow.SetHExpand(true)
+	tl.flow.SetMarginTop(2)
+
+	return tl
+}
+
+func (tl *tagListWidget) rows() []*gtk4.Widget {
+	return []*gtk4.Widget{&tl.combo.Widget, &tl.flow.Widget}
+}
+
+func (tl *tagListWidget) addPill(tag string) {
+	for _, p := range tl.pills {
+		if p.label == tag {
+			return
+		}
+	}
+
+	pillBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 2)
+	pillBox.AddCSSClass("tag-pill")
+	pillBox.SetMarginStart(2)
+
+	lbl := gtk4.LabelNew(tag)
+	pillBox.Append(&lbl.Widget)
+
+	rmBtn := gtk4.ButtonNew()
+	rmBtn.SetIconName("window-close-symbolic")
+	rmBtn.AddCSSClass("flat")
+	pill := tagPill{box: pillBox, label: tag}
+	rmBtn.OnClicked(func() {
+		tl.removePill(pill)
+	})
+	rmBtnW := rmBtn.Widget
+	pillBox.Append(&rmBtnW)
+
+	tl.pills = append(tl.pills, pill)
+	pbWidget := pillBox.Widget
+	tl.flow.Append(&pbWidget)
+
+	if tl.onChanged != nil {
+		tl.onChanged()
+	}
+}
+
+func (tl *tagListWidget) removePill(pill tagPill) {
+	for i, p := range tl.pills {
+		if p.label == pill.label {
+			tl.flow.Remove(&pill.box.Widget)
+			tl.pills = append(tl.pills[:i], tl.pills[i+1:]...)
+			if tl.onChanged != nil {
+				tl.onChanged()
+			}
+			return
+		}
+	}
+}
+
+func (tl *tagListWidget) setValue(value string) {
+	for _, p := range tl.pills {
+		tl.flow.Remove(&p.box.Widget)
+	}
+	tl.pills = nil
+
+	if value == "" {
+		return
+	}
+	for _, tag := range strings.Fields(value) {
+		tag = strings.TrimSpace(tag)
+		if tag != "" {
+			tl.addPillInner(tag)
+		}
+	}
+}
+
+func (tl *tagListWidget) addPillInner(tag string) {
+	pillBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 2)
+	pillBox.AddCSSClass("tag-pill")
+	pillBox.SetMarginStart(2)
+
+	lbl := gtk4.LabelNew(tag)
+	pillBox.Append(&lbl.Widget)
+
+	rmBtn := gtk4.ButtonNew()
+	rmBtn.SetIconName("window-close-symbolic")
+	rmBtn.AddCSSClass("flat")
+	pill := tagPill{box: pillBox, label: tag}
+	rmBtn.OnClicked(func() {
+		tl.removePill(pill)
+	})
+	rmBtnW := rmBtn.Widget
+	pillBox.Append(&rmBtnW)
+
+	tl.pills = append(tl.pills, pill)
+	pbWidget := pillBox.Widget
+	tl.flow.Append(&pbWidget)
+}
+
+func (tl *tagListWidget) getValue() string {
+	var tags []string
+	for _, p := range tl.pills {
+		tags = append(tags, p.label)
+	}
+	return strings.Join(tags, " ")
+}
+
+func (tl *tagListWidget) SetOnChanged(fn func()) {
+	tl.onChanged = fn
 }
 
 type ServiceDialog struct {
@@ -24,11 +159,14 @@ type ServiceDialog struct {
 	isUser    bool
 	advanced  bool
 	modeBtn   *gtk4.Button
-	entries   map[string]*gtk4.Entry
-	combos    map[string]*gtk4.ComboBoxText
-	checks    map[string]*gtk4.CheckButton
-	capChecks map[string][]capCheck
-	targets   []string
+
+	entries      map[string]*gtk4.Entry
+	textViews    map[string]*gtk4.TextView
+	checks       map[string]*gtk4.CheckButton
+	combos       map[string]*gtk4.ComboBoxText
+	spins        map[string]*gtk4.SpinButton
+	tagLists     map[string]*tagListWidget
+	targets      []string
 }
 
 func NewServiceDialog(parent *gtk4.Window, uf *systemdunit.UnitFile, unitName string, isUser bool) *ServiceDialog {
@@ -38,9 +176,11 @@ func NewServiceDialog(parent *gtk4.Window, uf *systemdunit.UnitFile, unitName st
 		unitName:  unitName,
 		isUser:    isUser,
 		entries:   make(map[string]*gtk4.Entry),
-		combos:    make(map[string]*gtk4.ComboBoxText),
+		textViews: make(map[string]*gtk4.TextView),
 		checks:    make(map[string]*gtk4.CheckButton),
-		capChecks: make(map[string][]capCheck),
+		combos:    make(map[string]*gtk4.ComboBoxText),
+		spins:     make(map[string]*gtk4.SpinButton),
+		tagLists:  make(map[string]*tagListWidget),
 	}
 	sd.loadTargets()
 	sd.build()
@@ -58,12 +198,13 @@ func (sd *ServiceDialog) loadTargets() {
 			sd.targets = append(sd.targets, fields[0])
 		}
 	}
+	sort.Strings(sd.targets)
 }
 
 func (sd *ServiceDialog) build() {
 	sd.win = gtk4.WindowNew()
 	sd.win.SetTitle("Service Settings - " + sd.unitName)
-	sd.win.SetDefaultSize(800, 600)
+	sd.win.SetDefaultSize(860, 680)
 	sd.win.SetModal(true)
 	sd.win.SetTransientFor(sd.parentWin)
 
@@ -83,24 +224,7 @@ func (sd *ServiceDialog) build() {
 
 	sections := []string{"Unit", "Service", "Socket", "Install"}
 	firstSection := ""
-
 	for _, secName := range sections {
-		keys := sd.unitFile.SectionKeys(secName)
-		knownKeys := systemdunit.KnownSectionKeys(secName)
-		if len(keys) == 0 && knownKeys == nil {
-			continue
-		}
-		tab := sd.buildSectionTab(secName)
-		sd.stack.AddTitled(&tab.Widget, secName, secName)
-		if firstSection == "" {
-			firstSection = secName
-		}
-	}
-
-	for secName, sec := range sd.unitFile.Sections {
-		if isStandardSection(secName) || len(sec.Keys) == 0 {
-			continue
-		}
 		tab := sd.buildSectionTab(secName)
 		sd.stack.AddTitled(&tab.Widget, secName, secName)
 		if firstSection == "" {
@@ -114,10 +238,6 @@ func (sd *ServiceDialog) build() {
 	switcher.SetStack(sd.stack)
 
 	vbox.Append(&sd.stack.Widget)
-
-	sep := gtk4.BoxNew(gtk4.OrientationHorizontal, 0)
-	sep.SetSizeRequest(-1, 1)
-	vbox.Append(&sep.Widget)
 
 	btnBox := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
 	btnBox.SetMarginStart(24)
@@ -147,103 +267,110 @@ func (sd *ServiceDialog) build() {
 	sd.win.SetChild(&vbox.Widget)
 }
 
-func (sd *ServiceDialog) getSectionKeys(sectionName string) []string {
-	if sd.advanced {
-		fileKeys := sd.unitFile.SectionKeys(sectionName)
-		knownKeys := systemdunit.KnownSectionKeys(sectionName)
-		if knownKeys == nil {
-			return fileKeys
-		}
-		keySet := make(map[string]bool)
-		var allKeys []string
-		for _, k := range fileKeys {
-			if !keySet[k] {
-				keySet[k] = true
-				allKeys = append(allKeys, k)
-			}
-		}
-		for _, k := range knownKeys {
-			if !keySet[k] {
-				keySet[k] = true
-				allKeys = append(allKeys, k)
-			}
-		}
-		return systemdunit.SortKeysByKnown(sectionName, allKeys)
-	}
-	return sd.unitFile.SectionKeys(sectionName)
-}
-
-func (sd *ServiceDialog) onToggleMode() {
-	sd.advanced = !sd.advanced
-	if sd.advanced {
-		sd.modeBtn.SetLabel("Simple")
-	} else {
-		sd.modeBtn.SetLabel("Advanced")
-	}
-	sd.rebuildTabs()
-}
-
-func (sd *ServiceDialog) rebuildTabs() {
-	sd.entries = make(map[string]*gtk4.Entry)
-	sd.combos = make(map[string]*gtk4.ComboBoxText)
-	sd.checks = make(map[string]*gtk4.CheckButton)
-	sd.capChecks = make(map[string][]capCheck)
-
-	sections := []string{"Unit", "Service", "Socket", "Install"}
-	for _, secName := range sections {
-		child := sd.stack.GetChildByName(secName)
-		if child != nil {
-			sd.stack.Remove(child)
-		}
-		newBox := sd.buildSectionTab(secName)
-		sd.stack.AddTitled(&newBox.Widget, secName, secName)
-	}
-}
-
 func (sd *ServiceDialog) buildSectionTab(sectionName string) *gtk4.Box {
-	box := gtk4.BoxNew(gtk4.OrientationVertical, 8)
-	box.SetMarginStart(24)
-	box.SetMarginEnd(24)
-	box.SetMarginTop(12)
-
-	if sd.unitFile == nil {
-		return box
-	}
+	box := gtk4.BoxNew(gtk4.OrientationVertical, 0)
+	box.SetHExpand(true)
+	box.SetVExpand(true)
 
 	scrollW := gtk4.ScrolledWindowNew()
 	scrollW.SetPolicy(gtk4.PolicyNever, gtk4.PolicyAutomatic)
 	scrollW.SetHExpand(true)
 	scrollW.SetVExpand(true)
 
-	innerBox := gtk4.BoxNew(gtk4.OrientationVertical, 4)
+	innerBox := gtk4.BoxNew(gtk4.OrientationVertical, 0)
+	innerBox.SetMarginStart(24)
+	innerBox.SetMarginEnd(24)
+	innerBox.SetMarginTop(12)
+	innerBox.SetMarginBottom(12)
 
-	allKeys := sd.getSectionKeys(sectionName)
-
-	for _, key := range allKeys {
-		value := sd.unitFile.Get(sectionName, key)
-
-		if key == "CapabilityBoundingSet" {
-			row := sd.createCapSetRow(sectionName, key, value)
-			innerBox.Append(&row.Widget)
-		} else if isBooleanKey(sectionName, key) {
-			row := sd.createCheckRow(sectionName, key, value)
-			innerBox.Append(&row.Widget)
-		} else if isRelationshipKey(sectionName, key) {
-			row := sd.createComboRow(sectionName, key, value)
-			innerBox.Append(&row.Widget)
-		} else {
-			row := sd.createEntryRow(sectionName, key, value)
-			innerBox.Append(&row.Widget)
+	groups := systemdunit.GetSectionGroups(sectionName)
+	for _, group := range groups {
+		if !sd.advanced && !sd.groupHasValue(sectionName, group) {
+			continue
 		}
+		sd.buildGroupBox(innerBox, sectionName, group)
 	}
 
 	scrollW.SetChild(&innerBox.Widget)
 	box.Append(&scrollW.Widget)
 
-	scrollWidget := scrollW.Widget
-	scrollWidget.SetVExpand(true)
-
 	return box
+}
+
+func (sd *ServiceDialog) propertyLabel(key string) *gtk4.Label {
+	lbl := gtk4.LabelNew(key)
+	lbl.SetSizeRequest(210, -1)
+	lbl.SetHAlign(gtk4.AlignStart)
+	lbl.SetXAlign(0)
+	lbl.SetMarginEnd(8)
+	lbl.SetTooltip(key)
+	return lbl
+}
+
+func (sd *ServiceDialog) groupHasValue(sectionName string, group systemdunit.PropertyGroup) bool {
+	for _, key := range group.Keys {
+		value := sd.unitFile.Get(sectionName, key)
+		if value != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func (sd *ServiceDialog) buildGroupBox(parent *gtk4.Box, sectionName string, group systemdunit.PropertyGroup) {
+	groupBox := gtk4.BoxNew(gtk4.OrientationVertical, 4)
+	groupBox.SetMarginTop(8)
+	groupBox.SetMarginBottom(8)
+
+	header := gtk4.LabelNew(group.Name)
+	header.AddCSSClass("group-header")
+	header.SetHAlign(gtk4.AlignStart)
+	header.SetMarginBottom(4)
+	groupBox.Append(&header.Widget)
+
+	hasContent := false
+	for _, key := range group.Keys {
+		meta, ok := systemdunit.GetPropertyMeta(sectionName, key)
+		if !ok {
+			continue
+		}
+		value := sd.unitFile.Get(sectionName, key)
+		row := sd.buildPropertyRow(sectionName, key, value, meta)
+		if row != nil {
+			groupBox.Append(&row.Widget)
+			hasContent = true
+		}
+	}
+
+	if !hasContent {
+		return
+	}
+
+	groupBoxW := groupBox.Widget
+	parent.Append(&groupBoxW)
+}
+
+func (sd *ServiceDialog) buildPropertyRow(section, key, value string, meta systemdunit.PropertyMeta) *gtk4.Box {
+	switch meta.PropType {
+	case systemdunit.PropBoolean:
+		return sd.createCheckRow(section, key, value)
+	case systemdunit.PropEnum:
+		return sd.createEnumComboRow(section, key, value, meta.EnumValues)
+	case systemdunit.PropNumber:
+		return sd.createSpinRow(section, key, value, meta.Min, meta.Max, meta.Step)
+	case systemdunit.PropFilePath:
+		return sd.createFilePathRow(section, key, value, meta.MimeTypes)
+	case systemdunit.PropFolderPath:
+		return sd.createFolderPathRow(section, key, value)
+	case systemdunit.PropMultiLine:
+		return sd.createMultiLineRow(section, key, value)
+	case systemdunit.PropTagList:
+		return sd.createTagListRow(section, key, value)
+	case systemdunit.PropTarget:
+		return sd.createTargetRow(section, key, value)
+	default:
+		return sd.createEntryRow(section, key, value)
+	}
 }
 
 func (sd *ServiceDialog) createEntryRow(section, key, value string) *gtk4.Box {
@@ -251,11 +378,7 @@ func (sd *ServiceDialog) createEntryRow(section, key, value string) *gtk4.Box {
 	row.SetMarginTop(2)
 	row.SetMarginBottom(2)
 
-	lbl := gtk4.LabelNew(key)
-	lbl.SetSizeRequest(200, -1)
-	lbl.SetHAlign(gtk4.AlignStart)
-	lbl.SetMarginEnd(8)
-	lbl.SetTooltip(key)
+	lbl := sd.propertyLabel(key)
 	row.Append(&lbl.Widget)
 
 	entry := gtk4.EntryNew()
@@ -264,20 +387,214 @@ func (sd *ServiceDialog) createEntryRow(section, key, value string) *gtk4.Box {
 	row.Append(&entry.Widget)
 
 	sd.entries[section+"/"+key] = entry
-
 	return row
 }
 
-func (sd *ServiceDialog) createComboRow(section, key, value string) *gtk4.Box {
+func (sd *ServiceDialog) createCheckRow(section, key, value string) *gtk4.Box {
 	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
 	row.SetMarginTop(2)
 	row.SetMarginBottom(2)
 
-	lbl := gtk4.LabelNew(key)
-	lbl.SetSizeRequest(200, -1)
-	lbl.SetHAlign(gtk4.AlignStart)
-	lbl.SetMarginEnd(8)
-	lbl.SetTooltip(key)
+	lbl := sd.propertyLabel(key)
+	row.Append(&lbl.Widget)
+
+	check := gtk4.CheckButtonNew()
+	check.SetActive(value == "yes" || value == "true" || value == "1")
+	row.Append(&check.Widget)
+
+	sd.checks[section+"/"+key] = check
+	return row
+}
+
+func (sd *ServiceDialog) createEnumComboRow(section, key, value string, enumValues []string) *gtk4.Box {
+	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	row.SetMarginTop(2)
+	row.SetMarginBottom(2)
+
+	lbl := sd.propertyLabel(key)
+	row.Append(&lbl.Widget)
+
+	combo := gtk4.ComboBoxTextNew()
+	combo.SetHExpand(true)
+
+	selectedIdx := 0
+	for i, ev := range enumValues {
+		combo.Append(ev, ev)
+		if ev == value {
+			selectedIdx = i
+		}
+	}
+	combo.SetActive(selectedIdx)
+
+	row.Append(&combo.Widget)
+
+	sd.combos[section+"/"+key] = combo
+	return row
+}
+
+func (sd *ServiceDialog) createSpinRow(section, key, value string, min, max, step float64) *gtk4.Box {
+	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	row.SetMarginTop(2)
+	row.SetMarginBottom(2)
+
+	lbl := sd.propertyLabel(key)
+	row.Append(&lbl.Widget)
+
+	if step == 0 {
+		step = 1
+	}
+	spinMax := max
+	if spinMax == 0 && min == 0 {
+		spinMax = 4294967295
+	}
+	spin := gtk4.SpinButtonNew(min, spinMax, step)
+	if value != "" {
+		if v, err := strconv.ParseFloat(value, 64); err == nil {
+			spin.SetValue(v)
+		}
+	}
+	spin.SetHExpand(true)
+	row.Append(&spin.Widget)
+
+	sd.spins[section+"/"+key] = spin
+	return row
+}
+
+func (sd *ServiceDialog) createFilePathRow(section, key, value string, mimeTypes []string) *gtk4.Box {
+	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	row.SetMarginTop(2)
+	row.SetMarginBottom(2)
+
+	lbl := sd.propertyLabel(key)
+	row.Append(&lbl.Widget)
+
+	entry := gtk4.EntryNew()
+	entry.SetText(value)
+	entry.SetHExpand(true)
+	row.Append(&entry.Widget)
+
+	browseBtn := gtk4.ButtonNewWithLabel("Browse...")
+	browseBtn.AddCSSClass("flat")
+	entryRef := entry
+	parentWin := sd.win
+	browseBtn.OnClicked(func() {
+		dialog := gtk4.FileDialogNew()
+		dialog.SetTitle("Select File - " + key)
+		if len(mimeTypes) > 0 {
+			filter := gtk4.FileFilterNew()
+			for _, mime := range mimeTypes {
+				filter.AddMimeType(mime)
+			}
+			filter.SetName("Supported Files")
+			dialog.SetDefaultFilter(filter)
+		}
+		dialog.Open(parentWin, func(path string, err string) {
+			if path != "" {
+				entryRef.SetText(path)
+			}
+		})
+	})
+	btnW := browseBtn.Widget
+	row.Append(&btnW)
+
+	sd.entries[section+"/"+key] = entry
+	return row
+}
+
+func (sd *ServiceDialog) createFolderPathRow(section, key, value string) *gtk4.Box {
+	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	row.SetMarginTop(2)
+	row.SetMarginBottom(2)
+
+	lbl := sd.propertyLabel(key)
+	row.Append(&lbl.Widget)
+
+	entry := gtk4.EntryNew()
+	entry.SetText(value)
+	entry.SetHExpand(true)
+	row.Append(&entry.Widget)
+
+	browseBtn := gtk4.ButtonNewWithLabel("Browse...")
+	browseBtn.AddCSSClass("flat")
+	entryRef := entry
+	parentWin := sd.win
+	browseBtn.OnClicked(func() {
+		dialog := gtk4.FileDialogNew()
+		dialog.SetTitle("Select Folder - " + key)
+		dialog.SelectFolder(parentWin, func(path string, err string) {
+			if path != "" {
+				entryRef.SetText(path)
+			}
+		})
+	})
+	btnW := browseBtn.Widget
+	row.Append(&btnW)
+
+	sd.entries[section+"/"+key] = entry
+	return row
+}
+
+func (sd *ServiceDialog) createMultiLineRow(section, key, value string) *gtk4.Box {
+	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	row.SetMarginTop(2)
+	row.SetMarginBottom(2)
+
+	lbl := sd.propertyLabel(key)
+	lbl.SetVAlign(gtk4.AlignStart)
+	lbl.SetMarginTop(4)
+	row.Append(&lbl.Widget)
+
+	scrollFrame := gtk4.ScrolledWindowNew()
+	scrollFrame.SetPolicy(gtk4.PolicyAutomatic, gtk4.PolicyAutomatic)
+	scrollFrame.SetHExpand(true)
+	scrollFrame.SetSizeRequest(-1, 80)
+
+	tv := gtk4.TextViewNew()
+	tv.SetText(value)
+	tv.SetHExpand(true)
+	tv.SetVExpand(true)
+	scrollFrame.SetChild(&tv.Widget)
+
+	row.Append(&scrollFrame.Widget)
+
+	sd.textViews[section+"/"+key] = tv
+	return row
+}
+
+func (sd *ServiceDialog) createTagListRow(section, key, value string) *gtk4.Box {
+	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	row.SetMarginTop(4)
+	row.SetMarginBottom(4)
+
+	lbl := sd.propertyLabel(key)
+	lbl.SetVAlign(gtk4.AlignStart)
+	lbl.SetMarginTop(2)
+	row.Append(&lbl.Widget)
+
+	rightBox := gtk4.BoxNew(gtk4.OrientationVertical, 4)
+	rightBox.SetHExpand(true)
+
+	options := systemdunit.GetTagOptions(key)
+	tl := newTagListWidget(options)
+	tl.setValue(value)
+
+	for _, w := range tl.rows() {
+		rightBox.Append(w)
+	}
+
+	sd.tagLists[section+"/"+key] = tl
+
+	rightBoxW := rightBox.Widget
+	row.Append(&rightBoxW)
+	return row
+}
+
+func (sd *ServiceDialog) createTargetRow(section, key, value string) *gtk4.Box {
+	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
+	row.SetMarginTop(2)
+	row.SetMarginBottom(2)
+
+	lbl := sd.propertyLabel(key)
 	row.Append(&lbl.Widget)
 
 	combo := gtk4.ComboBoxTextNewWithEntry()
@@ -303,80 +620,42 @@ func (sd *ServiceDialog) createComboRow(section, key, value string) *gtk4.Box {
 	}
 
 	row.Append(&combo.Widget)
-
 	sd.combos[section+"/"+key] = combo
-
 	return row
 }
 
-func (sd *ServiceDialog) createCheckRow(section, key, value string) *gtk4.Box {
-	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
-	row.SetMarginTop(2)
-	row.SetMarginBottom(2)
-
-	lbl := gtk4.LabelNew(key)
-	lbl.SetSizeRequest(200, -1)
-	lbl.SetHAlign(gtk4.AlignStart)
-	lbl.SetMarginEnd(8)
-	lbl.SetTooltip(key)
-	row.Append(&lbl.Widget)
-
-	check := gtk4.CheckButtonNew()
-	check.SetActive(value == "yes" || value == "true" || value == "1")
-	row.Append(&check.Widget)
-
-	sd.checks[section+"/"+key] = check
-
-	return row
-}
-
-func (sd *ServiceDialog) createCapSetRow(section, key, value string) *gtk4.Box {
-	row := gtk4.BoxNew(gtk4.OrientationHorizontal, 8)
-	row.SetMarginTop(4)
-	row.SetMarginBottom(4)
-
-	lbl := gtk4.LabelNew(key)
-	lbl.SetSizeRequest(200, -1)
-	lbl.SetHAlign(gtk4.AlignStart)
-	lbl.SetMarginEnd(8)
-	lbl.SetVAlign(gtk4.AlignStart)
-	lbl.SetTooltip(key)
-	row.Append(&lbl.Widget)
-
-	activeSet := make(map[string]bool)
-	for _, cap := range strings.Fields(value) {
-		activeSet[strings.TrimSpace(cap)] = true
+func (sd *ServiceDialog) onToggleMode() {
+	sd.advanced = !sd.advanced
+	if sd.advanced {
+		sd.modeBtn.SetLabel("Simple")
+	} else {
+		sd.modeBtn.SetLabel("Advanced")
 	}
 
-	caps := linuxCapabilities()
-	sort.Strings(caps)
-
-	rightBox := gtk4.BoxNew(gtk4.OrientationVertical, 2)
-	rightBox.SetHExpand(true)
-
-	var checks []capCheck
-	perRow := 4
-	for start := 0; start < len(caps); start += perRow {
-		end := start + perRow
-		if end > len(caps) {
-			end = len(caps)
+	sections := []string{"Unit", "Service", "Socket", "Install"}
+	for _, secName := range sections {
+		child := sd.stack.GetChildByName(secName)
+		if child != nil {
+			sd.stack.Remove(child)
 		}
-		cbRow := gtk4.BoxNew(gtk4.OrientationHorizontal, 4)
-		for _, cap := range caps[start:end] {
-			chk := gtk4.CheckButtonNewWithLabel(cap)
-			chk.SetActive(activeSet[cap])
-			chk.SetMarginStart(4)
-			cbRow.Append(&chk.Widget)
-			checks = append(checks, capCheck{check: chk, label: cap})
-		}
-		rightBox.Append(&cbRow.Widget)
 	}
 
-	row.Append(&rightBox.Widget)
+	sd.entries = make(map[string]*gtk4.Entry)
+	sd.textViews = make(map[string]*gtk4.TextView)
+	sd.checks = make(map[string]*gtk4.CheckButton)
+	sd.combos = make(map[string]*gtk4.ComboBoxText)
+	sd.spins = make(map[string]*gtk4.SpinButton)
+	sd.tagLists = make(map[string]*tagListWidget)
 
-	sd.capChecks[section+"/"+key] = checks
+	visibleName := sd.stack.GetVisibleChildName()
+	for _, secName := range sections {
+		newBox := sd.buildSectionTab(secName)
+		sd.stack.AddTitled(&newBox.Widget, secName, secName)
+	}
 
-	return row
+	if visibleName != "" {
+		sd.stack.SetVisibleChildName(visibleName)
+	}
 }
 
 func (sd *ServiceDialog) onSave() {
@@ -387,18 +666,12 @@ func (sd *ServiceDialog) onSave() {
 	for entryKey, entry := range sd.entries {
 		section, key := entryKeyToSectionKey(entryKey)
 		value := strings.TrimSpace(entry.GetText())
-
 		sd.unitFile.Set(section, key, value)
 	}
 
-	for comboKey, combo := range sd.combos {
-		section, key := entryKeyToSectionKey(comboKey)
-		id := combo.GetActiveID()
-		value := strings.TrimSpace(combo.GetActiveText())
-		if id != "" {
-			value = id
-		}
-
+	for tvKey, tv := range sd.textViews {
+		section, key := entryKeyToSectionKey(tvKey)
+		value := strings.TrimSpace(tv.GetText())
 		sd.unitFile.Set(section, key, value)
 	}
 
@@ -411,19 +684,26 @@ func (sd *ServiceDialog) onSave() {
 		}
 	}
 
-	for capKey, checks := range sd.capChecks {
-		section, key := entryKeyToSectionKey(capKey)
-		var enabled []string
-		for _, c := range checks {
-			if c.check.GetActive() {
-				enabled = append(enabled, c.label)
-			}
+	for comboKey, combo := range sd.combos {
+		section, key := entryKeyToSectionKey(comboKey)
+		id := combo.GetActiveID()
+		value := strings.TrimSpace(combo.GetActiveText())
+		if id != "" {
+			value = id
 		}
-		if len(enabled) > 0 {
-			sd.unitFile.Set(section, key, strings.Join(enabled, " "))
-		} else {
-			sd.unitFile.Set(section, key, "")
-		}
+		sd.unitFile.Set(section, key, value)
+	}
+
+	for spinKey, spin := range sd.spins {
+		section, key := entryKeyToSectionKey(spinKey)
+		v := spin.GetValue()
+		sd.unitFile.Set(section, key, strconv.FormatFloat(v, 'f', -1, 64))
+	}
+
+	for tagKey, tl := range sd.tagLists {
+		section, key := entryKeyToSectionKey(tagKey)
+		value := tl.getValue()
+		sd.unitFile.Set(section, key, value)
 	}
 
 	content := sd.unitFile.Serialize()
@@ -457,70 +737,4 @@ func entryKeyToSectionKey(entryKey string) (string, string) {
 		return "", ""
 	}
 	return parts[0], parts[1]
-}
-
-func isStandardSection(name string) bool {
-	switch name {
-	case "Unit", "Service", "Socket", "Install", "Timer", "Mount", "Swap", "Path", "Slice", "Scope":
-		return true
-	}
-	return false
-}
-
-func isRelationshipKey(section, key string) bool {
-	relKeys := map[string]bool{
-		"After": true, "Before": true, "Wants": true, "Requires": true,
-		"Requisite": true, "BindsTo": true, "PartOf": true, "Upholds": true,
-		"Conflicts": true, "OnFailure": true, "OnSuccess": true,
-	}
-	installKeys := map[string]bool{
-		"WantedBy": true, "RequiredBy": true, "UpheldBy": true, "Also": true,
-	}
-	switch section {
-	case "Unit":
-		return relKeys[key]
-	case "Install":
-		return installKeys[key]
-	}
-	return false
-}
-
-func isBooleanKey(section, key string) bool {
-	booleanKeys := map[string]bool{
-		"RemainAfterExit": true, "GuessMainPID": true, "RootDirectoryStartOnly": true,
-		"NonBlocking": true, "TTYReset": true, "TTYVHangup": true, "TTYVTDisallocate": true,
-		"PrivateTmp": true, "PrivateDevices": true, "PrivateNetwork": true,
-		"PrivateUsers": true, "PrivateMounts": true, "PrivateIPC": true,
-		"ProtectHome": true, "ProtectSystem": true, "ProtectHostname": true,
-		"ProtectKernelTunables": true, "ProtectKernelModules": true,
-		"ProtectKernelLogs": true, "ProtectClock": true, "ProtectControlGroups": true,
-		"LockPersonality": true, "MemoryDenyWriteExecute": true,
-		"RestrictRealtime": true, "RestrictSUIDSGID": true, "RemoveIPC": true,
-		"NoNewPrivileges": true, "DynamicUser": true,
-		"IgnoreOnIsolate": true, "StopWhenUnneeded": true,
-		"RefuseManualStart": true, "RefuseManualStop": true,
-		"AllowIsolate": true, "DefaultDependencies": true,
-		"MountAPIVFS": true, "ProtectProc": true,
-		"IPAccounting": true, "CPUAccounting": true, "MemoryAccounting": true,
-		"TasksAccounting": true, "IOAccounting": true,
-	}
-	return booleanKeys[key]
-}
-
-func linuxCapabilities() []string {
-	return []string{
-		"CAP_AUDIT_CONTROL", "CAP_AUDIT_READ", "CAP_AUDIT_WRITE",
-		"CAP_BLOCK_SUSPEND", "CAP_BPF", "CAP_CHECKPOINT_RESTORE",
-		"CAP_CHOWN", "CAP_DAC_OVERRIDE", "CAP_DAC_READ_SEARCH",
-		"CAP_FOWNER", "CAP_FSETID", "CAP_IPC_LOCK", "CAP_IPC_OWNER",
-		"CAP_KILL", "CAP_LEASE", "CAP_LINUX_IMMUTABLE",
-		"CAP_MAC_ADMIN", "CAP_MAC_OVERRIDE", "CAP_MKNOD",
-		"CAP_NET_ADMIN", "CAP_NET_BIND_SERVICE", "CAP_NET_BROADCAST",
-		"CAP_NET_RAW", "CAP_PERFMON", "CAP_SETFCAP", "CAP_SETGID",
-		"CAP_SETPCAP", "CAP_SETUID", "CAP_SYS_ADMIN", "CAP_SYS_BOOT",
-		"CAP_SYS_CHROOT", "CAP_SYS_MODULE", "CAP_SYS_NICE",
-		"CAP_SYS_PACCT", "CAP_SYS_PTRACE", "CAP_SYS_RAWIO",
-		"CAP_SYS_RESOURCE", "CAP_SYS_TIME", "CAP_SYS_TTY_CONFIG",
-		"CAP_SYSLOG", "CAP_WAKE_ALARM",
-	}
 }

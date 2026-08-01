@@ -6,6 +6,7 @@ extern void goBridgeListBoxRowActivated(uintptr_t data, void *row);
 extern int goBridgeBool3Uint(uintptr_t data, unsigned int a, unsigned int b, unsigned int c);
 extern int goBridgeBool(uintptr_t data);
 extern void goBridgeDouble(uintptr_t data, double val);
+extern void goBridgeFileDialogPath(uintptr_t data, char *path, char *errorMsg);
 
 static void _bridge_void(GtkWidget *widget, gpointer data) {
 	goBridgeVoid((uintptr_t)data);
@@ -38,6 +39,32 @@ static void _bridge_notify(GObject *obj, GParamSpec *pspec, gpointer data) {
 
 static void _bridge_spin_value_changed(GtkSpinButton *spin, gpointer data) {
 	goBridgeDouble((uintptr_t)data, gtk_spin_button_get_value(spin));
+}
+
+static void _bridge_file_dialog_callback(GObject *source, GAsyncResult *result, gpointer data) {
+	GError *error = NULL;
+	GFile *file = gtk_file_dialog_open_finish(GTK_FILE_DIALOG(source), result, &error);
+	char *path = NULL;
+	if (file) {
+		path = g_file_get_path(file);
+		g_object_unref(file);
+	}
+	goBridgeFileDialogPath((uintptr_t)data, path, error ? error->message : NULL);
+	if (error) g_error_free(error);
+	if (path) g_free(path);
+}
+
+static void _bridge_folder_dialog_callback(GObject *source, GAsyncResult *result, gpointer data) {
+	GError *error = NULL;
+	GFile *file = gtk_file_dialog_select_folder_finish(GTK_FILE_DIALOG(source), result, &error);
+	char *path = NULL;
+	if (file) {
+		path = g_file_get_path(file);
+		g_object_unref(file);
+	}
+	goBridgeFileDialogPath((uintptr_t)data, path, error ? error->message : NULL);
+	if (error) g_error_free(error);
+	if (path) g_free(path);
 }
 
 void connectGSignal(void *instance, const char *signal, int handlerType, uintptr_t handle) {
@@ -268,3 +295,70 @@ unsigned int gtk4IdleAdd(uintptr_t data) {
 void *gtk4StackSwitcherNew(void) { return gtk_stack_switcher_new(); }
 void gtk4StackSwitcherSetStack(void *sw, void *stack) { gtk_stack_switcher_set_stack((GtkStackSwitcher*)sw, (GtkStack*)stack); }
 void *gtk4WindowGetTransientFor(void *win) { return gtk_window_get_transient_for((GtkWindow*)win); }
+
+void *gtk4FileDialogNew(void) { return gtk_file_dialog_new(); }
+void gtk4FileDialogSetTitle(void *dialog, const char *title) {
+	gtk_file_dialog_set_title(GTK_FILE_DIALOG(dialog), title);
+}
+void gtk4FileDialogSetAcceptLabel(void *dialog, const char *label) {
+	gtk_file_dialog_set_accept_label(GTK_FILE_DIALOG(dialog), label);
+}
+void gtk4FileDialogOpen(void *dialog, void *parent, uintptr_t handle) {
+	gtk_file_dialog_open(GTK_FILE_DIALOG(dialog), GTK_WINDOW(parent), NULL,
+		_bridge_file_dialog_callback, (gpointer)(uintptr_t)handle);
+}
+void gtk4FileDialogSelectFolder(void *dialog, void *parent, uintptr_t handle) {
+	gtk_file_dialog_select_folder(GTK_FILE_DIALOG(dialog), GTK_WINDOW(parent), NULL,
+		_bridge_folder_dialog_callback, (gpointer)(uintptr_t)handle);
+}
+void gtk4FileDialogSetDefaultFilter(void *dialog, void *filter) {
+	gtk_file_dialog_set_default_filter(GTK_FILE_DIALOG(dialog), GTK_FILE_FILTER(filter));
+}
+
+void *gtk4FileFilterNew(void) { return gtk_file_filter_new(); }
+void gtk4FileFilterAddMimeType(void *filter, const char *mime) {
+	gtk_file_filter_add_mime_type(GTK_FILE_FILTER(filter), mime);
+}
+void gtk4FileFilterSetName(void *filter, const char *name) {
+	gtk_file_filter_set_name(GTK_FILE_FILTER(filter), name);
+}
+
+void *gtk4TextViewNew(void) {
+	GtkWidget *view = gtk_text_view_new();
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(view), GTK_WRAP_WORD_CHAR);
+	gtk_text_view_set_monospace(GTK_TEXT_VIEW(view), TRUE);
+	return view;
+}
+void gtk4TextViewSetText(void *view, const char *text) {
+	GtkTextBuffer *buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
+	gtk_text_buffer_set_text(buf, text, -1);
+}
+char *gtk4TextViewGetText(void *view) {
+	GtkTextBuffer *buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
+	GtkTextIter start, end;
+	gtk_text_buffer_get_bounds(buf, &start, &end);
+	return gtk_text_buffer_get_text(buf, &start, &end, FALSE);
+}
+void gtk4TextViewSetEditable(void *view, int editable) {
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(view), editable);
+}
+
+void *gtk4FlowBoxNew(void) { return gtk_flow_box_new(); }
+void gtk4FlowBoxInsert(void *box, void *child, int pos) {
+	gtk_flow_box_insert(GTK_FLOW_BOX(box), GTK_WIDGET(child), pos);
+}
+void gtk4FlowBoxRemove(void *box, void *child) {
+	gtk_flow_box_remove(GTK_FLOW_BOX(box), GTK_WIDGET(child));
+}
+void gtk4FlowBoxSetSelectionMode(void *box, int mode) {
+	gtk_flow_box_set_selection_mode(GTK_FLOW_BOX(box), mode);
+}
+void gtk4FlowBoxSetMaxChildrenPerLine(void *box, guint n) {
+	gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(box), n);
+}
+void gtk4FlowBoxSetRowSpacing(void *box, guint s) {
+	gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(box), s);
+}
+void gtk4FlowBoxSetColumnSpacing(void *box, guint s) {
+	gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(box), s);
+}

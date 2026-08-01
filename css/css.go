@@ -132,6 +132,19 @@ const Stylesheet = `
 	color: #d64937;
 	font-weight: bold;
 }
+
+.group-header {
+	font-size: 15px;
+	font-weight: bold;
+	margin-top: 8px;
+}
+
+.tag-pill {
+	border-radius: 10px;
+	padding: 2px 6px;
+	margin: 2px;
+	background: alpha(@theme_fg_color, 0.08);
+}
 `
 
 func init() {
